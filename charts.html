@@ -1,0 +1,73 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EchoMind Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+        background-color: #1a1a1a;
+        color: #eee;
+        font-family: 'Poppins', sans-serif;
+        text-align: center;
+        padding: 2em;
+        }
+        canvas {
+        margin: 20px auto;
+        display: block;
+        box-shadow: 0 0 15px rgba(204, 51, 255, 0.4);
+        border-radius: 20px;
+        background: #222;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>Player Focus Progress</h1>
+    <canvas id="progressChart" width="400" height="200"></canvas>
+
+    <script>
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const progressChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Puzzle 1', 'Puzzle 2', 'Puzzle 3', 'Puzzle 4'],
+            datasets: [{
+            label: 'Average Completion Time (seconds)',
+            data: [42, 38, 35, 31],
+            borderColor: 'rgba(204, 51, 255, 0.8)',
+            backgroundColor: 'rgba(204, 51, 255, 0.1)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+            title: {
+                display: true,
+                text: 'Focus Improvement Over Time',
+                color: '#fff',
+                font: { size: 18 }
+            },
+            legend: {
+                labels: { color: '#fff' }
+            }
+            },
+            scales: {
+            x: {
+                ticks: { color: '#ccc' },
+                grid: { color: '#333' }
+            },
+            y: {
+                ticks: { color: '#ccc' },
+                grid: { color: '#333' }
+            }
+            }
+        }
+        });
+    </script>
+    </body>
+    </html>

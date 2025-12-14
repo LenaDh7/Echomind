@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EchoMind — Witchlight Memory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="icons/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- LOGIN / TITLE SCREEN -->
+    <section id="login">
+      <canvas id="particles-login" class="particles"></canvas>
+      <div class="titlebox">
+        <h1>EchoMind</h1>
+        <p class="subtitle">A meditative memory puzzle by <strong>Eleni D.</strong></p>
+      </div>
+      <div class="panel">
+        <input type="text" id="username" placeholder="Enter a name to begin" />
+        <button id="login-btn">Begin</button>
+        <p class="hint">Watch the sequence. Remember. Repeat the pattern.</p>
+      </div>
+      <button id="about-btn" class="icon-btn" title="About">?</button>
+      <button id="mute-btn" class="icon-btn" title="Sound">🔊</button>
+      <div id="about" class="about hidden">
+        <div class="about-content">
+          <h3>EchoMind: Witchlight Memory</h3>
+          <p><em>Created by <strong>Eleni D.</strong></em></p>
+          <p>In the quiet hum of the Witchlight, memory becomes ritual. Each sequence of light is a test of focus, patience, and stillness — a meditative challenge designed to sharpen attention while calming the mind.</p>
+          <p><strong>EchoMind</strong> is a soft puzzle of rhythm and recall — part memory trainer, part spell of concentration.</p>
+          <button id="close-about" class="ghost">Close</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRESTART -->
+    <section id="prestart" class="hidden">
+      <canvas id="particles" class="particles"></canvas>
+      <div class="centerbox">
+        <h2>Welcome, <span id="playername"></span></h2>
+        <p class="hint">Breathe in. Watch the light. Let memory bloom.</p>
+        <button id="start-btn">Start Puzzle</button>
+      </div>
+
+      <div class="multiplayer">
+        <button id="host-btn" class="ghost small">Host Multiplayer</button>
+        <button id="join-btn" class="ghost small">Join</button>
+      </div>
+
+      <button id="reset-btn" class="ghost small">Reset Progress</button>
+      <button id="mute-btn-pre" class="icon-btn">🔊</button>
+      <button id="about-btn-pre" class="icon-btn">?</button>
+    </section>
+
+    <!-- GAME -->
+    <section id="game" class="hidden">
+      <canvas id="particles-game" class="particles"></canvas>
+      <div class="hud">
+        <div>Difficulty: <span id="difficulty">0</span></div>
+        <div id="status"></div>
+        <div id="timer">Time: 0.0s</div>
+      </div>
+
+      <div class="puzzle-container">
+        <div id="puzzle"></div>
+        <div id="overlay" class="hidden">
+          <div class="overlay-content">
+            <h2>Puzzle Complete!</h2>
+            <p>Difficulty: <span id="res-diff"></span></p>
+            <p>Time: <span id="res-time"></span> s</p>
+            <p>Mistakes: <span id="res-mistakes"></span></p>
+            <div class="overlay-actions">
+              <button id="continue-btn">Continue</button>
+              <button id="retry-btn" class="ghost">Retry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="new-btn" class="ghost">Give Up (New Puzzle)</button>
+        <button id="logout-btn" class="ghost">Logout</button>
+      </div>
+
+      <div id="boards" class="dual">
+        <div>
+          <h3>🏆 Top 10 (Local)</h3>
+          <table>
+            <thead><tr><th>User</th><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
+            <tbody id="global-body"></tbody>
+          </table>
+        </div>
+        <div>
+          <h3>👤 Your Last 10</h3>
+          <table>
+            <thead><tr><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
+            <tbody id="user-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stats-toggle">
+        <button id="show-stats" class="ghost small">📊 View Stats</button>
+      </div>
+
+      <button id="mute-btn-game" class="icon-btn">🔊</button>
+      <button id="about-btn-game" class="icon-btn">?</button>
+    </section>
+  </div>
+
+  <!-- Multiplayer Overlay -->
+  <div id="mp-overlay" class="hidden">
+    <div class="mp-box">
+      <h2 id="mp-title">Multiplayer</h2>
+      <div id="mp-content">
+      </div>
+      <div class="mp-actions" id="mp-actions"></div>
+    </div>
+  </div>
+
+  <!-- 📈 PLAYER STATS SECTION -->
+  <section id="stats" class="hidden">
+    <h2>Player Statistics</h2>
+    <canvas id="progressChart" width="400" height="200"></canvas>
+  </section>
+
+  <audio id="chime" src="chime.wav" preload="auto"></audio>
+  <audio id="ambient" src="ambient.wav" preload="auto" loop></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.js"></script>
+  <script src="particles.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
