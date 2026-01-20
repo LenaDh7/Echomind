@@ -69,30 +69,30 @@ const LBOARD = "echomind_local_leaderboard_v1";
 
 // Local Data Functions
 function loadState() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SKEY) || "{}");
-    if (s.username) username = s.username;
-    if (Number.isFinite(s.difficulty)) difficulty = s.difficulty;
-  } catch {}
+    try {
+        const s = JSON.parse(localStorage.getItem(SKEY) || "{}");
+        if (s.username) username = s.username;
+        if (Number.isFinite(s.difficulty)) difficulty = s.difficulty;
+    } catch {}
 }
 
 function saveState() {
-  localStorage.setItem(SKEY, JSON.stringify({ username, difficulty }));
+    localStorage.setItem(SKEY, JSON.stringify({ username, difficulty }));
 }
 
 function pushLeaderboard(entry) {
-  const all = JSON.parse(localStorage.getItem(LBOARD) || "[]");
-  all.push(entry);
-  all.sort((a, b) => (b.difficulty - a.difficulty) || (a.completion_time - b.completion_time));
-  while (all.length > 100) all.pop();
-  localStorage.setItem(LBOARD, JSON.stringify(all));
-  refreshBoards();
+    const all = JSON.parse(localStorage.getItem(LBOARD) || "[]");
+    all.push(entry);
+    all.sort((a, b) => (b.difficulty - a.difficulty) || (a.completion_time - b.completion_time));
+    while (all.length > 100) all.pop();
+    localStorage.setItem(LBOARD, JSON.stringify(all));
+    refreshBoards();
 }
 
 // Initialization
 window.addEventListener("load", () => {
-  if(window.WitchlightParticles) P_login = WitchlightParticles.mount("particles-login");
-  loadState();
+    if(window.WitchlightParticles) P_login = WitchlightParticles.mount("particles-login");
+    loadState();
 });
 
 // About / Sound / Reset
@@ -102,190 +102,190 @@ if(aboutBtnGame) aboutBtnGame.addEventListener("click", () => aboutOverlay.class
 if(aboutClose) aboutClose.addEventListener("click", () => aboutOverlay.classList.add("hidden"));
 
 function setMuted(m) {
-  muted = m;
-  const label = muted ? "🔈" : "🔊";
-  [muteBtnLogin, muteBtnPre, muteBtnGame].forEach(b => { if (b) b.textContent = label; });
-  if (muted) { if(ambient) { ambient.volume = 0; ambient.pause(); } }
-  else { if(ambient) ambient.play(); }
+    muted = m;
+    const label = muted ? "🔈" : "🔊";
+    [muteBtnLogin, muteBtnPre, muteBtnGame].forEach(b => { if (b) b.textContent = label; });
+    if (muted) { if(ambient) { ambient.volume = 0; ambient.pause(); } }
+    else { if(ambient) ambient.play(); }
 }
 [muteBtnLogin, muteBtnPre, muteBtnGame].forEach(b => {
     if(b) b.addEventListener("click", () => setMuted(!muted));
 });
 
 if(resetBtn) resetBtn.addEventListener("click", () => {
-  localStorage.removeItem(LBOARD);
-  difficulty = 0;
-  saveState();
-  alert("Progress and local leaderboard cleared.");
+    localStorage.removeItem(LBOARD);
+    difficulty = 0;
+    saveState();
+    alert("Progress and local leaderboard cleared.");
 });
 
 // Login / Navigation
 if(loginBtn) loginBtn.addEventListener("click", async () => {
-  const u = (usernameInput.value || "").trim() || "Witchlight";
-  username = u; saveState();
-  loginSection.classList.add("hidden");
-  prestartSection.classList.remove("hidden");
-  playerNameEl.textContent = username;
-  if (!P_pre && window.WitchlightParticles) P_pre = WitchlightParticles.mount("particles");
+    const u = (usernameInput.value || "").trim() || "Witchlight";
+    username = u; saveState();
+    loginSection.classList.add("hidden");
+    prestartSection.classList.remove("hidden");
+    playerNameEl.textContent = username;
+    if (!P_pre && window.WitchlightParticles) P_pre = WitchlightParticles.mount("particles");
 
-  try {
-    if(ambient) {
-        await ambient.play();
-        const start = performance.now(), dur = 3000;
-        (function ramp(t) {
-        const p = Math.min(1, (t - start) / dur);
-        ambient.volume = muted ? 0 : (p * 0.35);
-        if (p < 1) requestAnimationFrame(ramp);
-        })(start);
-    }
-  } catch (e) {}
-});
+    try {
+        if(ambient) {
+            await ambient.play();
+            const start = performance.now(), dur = 3000;
+            (function ramp(t) {
+            const p = Math.min(1, (t - start) / dur);
+            ambient.volume = muted ? 0 : (p * 0.35);
+            if (p < 1) requestAnimationFrame(ramp);
+            })(start);
+        }
+    } catch (e) {}
+    });
 
 document.getElementById("start-btn").addEventListener("click", () => {
-  prestartSection.classList.add("hidden");
-  gameSection.classList.remove("hidden");
-  if (!P_game && window.WitchlightParticles) P_game = WitchlightParticles.mount("particles-game");
-  startNewPuzzle();
+    prestartSection.classList.add("hidden");
+    gameSection.classList.remove("hidden");
+    if (!P_game && window.WitchlightParticles) P_game = WitchlightParticles.mount("particles-game");
+    startNewPuzzle();
 });
 
 if(logoutBtn) logoutBtn.addEventListener("click", () => {
-  username = "";
-  difficulty = 0;
-  saveState();
-  window.location.reload();
+    username = "";
+    difficulty = 0;
+    saveState();
+    window.location.reload();
 });
 
 // Game Logic (Single Player)
 if(newBtn) newBtn.addEventListener("click", () => {
-  const timeSec = startMs ? ((Date.now() - startMs) / 1000) : 0;
-  pushLeaderboard({ username, difficulty, completion_time: timeSec, mistakes, outcome: "incomplete" });
-  difficulty = heuristicNext(difficulty, timeSec, mistakes);
-  saveState();
-  startNewPuzzle();
+    const timeSec = startMs ? ((Date.now() - startMs) / 1000) : 0;
+    pushLeaderboard({ username, difficulty, completion_time: timeSec, mistakes, outcome: "incomplete" });
+    difficulty = heuristicNext(difficulty, timeSec, mistakes);
+    saveState();
+    startNewPuzzle();
 });
 
-function startNewPuzzle() {
-  overlay.classList.add("hidden");
-  puzzleEl.innerHTML = "";
-  mistakes = 0; sequence = []; playerIndex = 0;
+    function startNewPuzzle() {
+    overlay.classList.add("hidden");
+    puzzleEl.innerHTML = "";
+    mistakes = 0; sequence = []; playerIndex = 0;
 
-  let size = 3;
-  if (difficulty >= 3 && difficulty < 7) size = 4;
-  else if (difficulty >= 7) size = 5;
+    let size = 3;
+    if (difficulty >= 3 && difficulty < 7) size = 4;
+    else if (difficulty >= 7) size = 5;
 
-  puzzleEl.style.gridTemplateColumns = `repeat(${size}, var(--tile))`;
-  const total = size * size;
+    puzzleEl.style.gridTemplateColumns = `repeat(${size}, var(--tile))`;
+    const total = size * size;
 
-  for (let i = 0; i < total; i++) {
-    const t = document.createElement("div");
-    t.className = "tile";
-    t.dataset.index = i;
-    t.addEventListener("click", () => onTileClick(i, t));
-    puzzleEl.appendChild(t);
-  }
+    for (let i = 0; i < total; i++) {
+        const t = document.createElement("div");
+        t.className = "tile";
+        t.dataset.index = i;
+        t.addEventListener("click", () => onTileClick(i, t));
+        puzzleEl.appendChild(t);
+    }
 
-  const base = 3 + Math.min(difficulty, 3);
-  const extra = (difficulty >= 7 ? 3 : (difficulty >= 3 ? 1 : 0));
-  const seqLen = base + extra;
+    const base = 3 + Math.min(difficulty, 3);
+    const extra = (difficulty >= 7 ? 3 : (difficulty >= 3 ? 1 : 0));
+    const seqLen = base + extra;
 
-  for (let i = 0; i < seqLen; i++)
-    sequence.push(Math.floor(Math.random() * total));
+    for (let i = 0; i < seqLen; i++)
+        sequence.push(Math.floor(Math.random() * total));
 
-  diffEl.textContent = difficulty;
-  flashSequence();
-}
+    diffEl.textContent = difficulty;
+    flashSequence();
+    }
 
-async function flashSequence() {
-  flashing = true;
-  statusEl.textContent = "Watch the pattern...";
-  const tiles = [...document.querySelectorAll(".tile")];
-  const flashMs = Math.max(350, 650 - difficulty * 20),
-        gapMs = Math.max(200, 300 - difficulty * 10);
+    async function flashSequence() {
+    flashing = true;
+    statusEl.textContent = "Watch the pattern...";
+    const tiles = [...document.querySelectorAll(".tile")];
+    const flashMs = Math.max(350, 650 - difficulty * 20),
+            gapMs = Math.max(200, 300 - difficulty * 10);
 
-  for (const idx of sequence) {
-    const t = tiles[idx];
-    t.classList.add("flash", "on");
-    await sleep(flashMs);
-    t.classList.remove("flash", "on");
-    await sleep(gapMs);
-  }
+    for (const idx of sequence) {
+        const t = tiles[idx];
+        t.classList.add("flash", "on");
+        await sleep(flashMs);
+        t.classList.remove("flash", "on");
+        await sleep(gapMs);
+    }
 
-  statusEl.textContent = "Your turn — repeat the pattern.";
-  flashing = false;
-  playerIndex = 0;
-  startMs = Date.now();
-  startTimer();
-}
+    statusEl.textContent = "Your turn — repeat the pattern.";
+    flashing = false;
+    playerIndex = 0;
+    startMs = Date.now();
+    startTimer();
+    }
 
 function onTileClick(i, tile) {
-  if (flashing) return;
-  const ok = sequence[playerIndex] === i;
-  if (ok) {
-    tile.classList.add("on");
-    setTimeout(() => tile.classList.remove("on"), 180);
-    playerIndex++;
-    if (playerIndex === sequence.length) onSolved();
-  } else {
-    mistakes++;
-    tile.classList.add("bad");
-    setTimeout(() => tile.classList.remove("bad"), 220);
-  }
+    if (flashing) return;
+    const ok = sequence[playerIndex] === i;
+    if (ok) {
+        tile.classList.add("on");
+        setTimeout(() => tile.classList.remove("on"), 180);
+        playerIndex++;
+        if (playerIndex === sequence.length) onSolved();
+    } else {
+        mistakes++;
+        tile.classList.add("bad");
+        setTimeout(() => tile.classList.remove("bad"), 220);
+    }
 }
 
 async function onSolved() {
-  clearInterval(window.__t);
-  const timeSec = ((Date.now() - startMs) / 1000).toFixed(1);
-  statusEl.textContent = "Puzzle solved! ✨";
+    clearInterval(window.__t);
+    const timeSec = ((Date.now() - startMs) / 1000).toFixed(1);
+    statusEl.textContent = "Puzzle solved! ✨";
 
-  try { if(chime) { chime.currentTime = 0; await chime.play(); } } catch (e) {}
+    try { if(chime) { chime.currentTime = 0; await chime.play(); } } catch (e) {}
 
-  const entry = {
-    username,
-    difficulty,
-    completion_time: parseFloat(timeSec),
-    mistakes,
-    outcome: "win"
-  };
+    const entry = {
+        username,
+        difficulty,
+        completion_time: parseFloat(timeSec),
+        mistakes,
+        outcome: "win"
+    };
 
-  pushLeaderboard(entry);
-  sendScoreToServer(entry); 
+    pushLeaderboard(entry);
+    sendScoreToServer(entry); 
 
-  resDiff.textContent = difficulty;
-  resTime.textContent = timeSec;
-  resMistakes.textContent = mistakes;
-  overlay.classList.remove("hidden");
+    resDiff.textContent = difficulty;
+    resTime.textContent = timeSec;
+    resMistakes.textContent = mistakes;
+    overlay.classList.remove("hidden");
 }
 
 if(continueBtn) continueBtn.addEventListener("click", () => {
-  overlay.classList.add("hidden");
-  const time = parseFloat(resTime.textContent), m = parseInt(resMistakes.textContent);
-  difficulty = heuristicNext(difficulty, time, m);
-  saveState();
-  startNewPuzzle();
+    overlay.classList.add("hidden");
+    const time = parseFloat(resTime.textContent), m = parseInt(resMistakes.textContent);
+    difficulty = heuristicNext(difficulty, time, m);
+    saveState();
+    startNewPuzzle();
 });
 
 if(retryBtn) retryBtn.addEventListener("click", () => {
-  overlay.classList.add("hidden");
-  playerIndex = 0;
-  startMs = 0;
-  timerEl.textContent = "Time: 0.0s";
-  flashSequence();
+    overlay.classList.add("hidden");
+    playerIndex = 0;
+    startMs = 0;
+    timerEl.textContent = "Time: 0.0s";
+    flashSequence();
 });
 
 // Timer / Utility
 function startTimer() {
-  clearInterval(window.__t);
-  window.__t = setInterval(() => {
-    const s = ((Date.now() - startMs) / 1000).toFixed(1);
-    timerEl.textContent = `Time: ${s}s`;
-  }, 250);
+    clearInterval(window.__t);
+    window.__t = setInterval(() => {
+        const s = ((Date.now() - startMs) / 1000).toFixed(1);
+        timerEl.textContent = `Time: ${s}s`;
+    }, 250);
 }
 
 function heuristicNext(d, t, m) {
-  let dlt = 0;
-  if (t <= 20 && m === 0) dlt = 1;
-  else if (t >= 60 || m >= 4) dlt = -1;
-  return Math.max(0, Math.min(10, d + dlt));
+    let dlt = 0;
+    if (t <= 20 && m === 0) dlt = 1;
+    else if (t >= 60 || m >= 4) dlt = -1;
+    return Math.max(0, Math.min(10, d + dlt));
 }
 
 function fmt(v) { return (v?.toFixed ? v.toFixed(2) : v); }
@@ -293,68 +293,68 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Leaderboard Rendering
 async function fetchLeaderboardFromServer() {
-  try {
-    const res = await fetch("php/fetch_leaderboard.php");
-    if (!res.ok) return [];
-    return await res.json();
-  } catch { return []; }
+    try {
+        const res = await fetch("php/fetch_leaderboard.php");
+        if (!res.ok) return [];
+        return await res.json();
+    } catch { return []; }
 }
 
 async function refreshBoards() {
-  const local = JSON.parse(localStorage.getItem(LBOARD) || "[]");
-  let server = [];
-  try { server = await fetchLeaderboardFromServer(); } catch {}
-  const combined = [...server, ...local];
-  const global = combined.sort((a, b) => b.difficulty - a.difficulty).slice(0, 10);
-  renderGlobal(global);
-  renderUser(local.filter(r => r.username === username).slice(-10).reverse());
+    const local = JSON.parse(localStorage.getItem(LBOARD) || "[]");
+    let server = [];
+    try { server = await fetchLeaderboardFromServer(); } catch {}
+    const combined = [...server, ...local];
+    const global = combined.sort((a, b) => b.difficulty - a.difficulty).slice(0, 10);
+    renderGlobal(global);
+    renderUser(local.filter(r => r.username === username).slice(-10).reverse());
 }
 
 function renderGlobal(rows) {
-  const tb = document.getElementById("global-body");
-  if(!tb) return;
-  tb.innerHTML = "";
-  (rows || []).forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.username}</td><td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
-    tb.appendChild(tr);
-  });
+    const tb = document.getElementById("global-body");
+    if(!tb) return;
+    tb.innerHTML = "";
+    (rows || []).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r.username}</td><td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
+        tb.appendChild(tr);
+    });
 }
 
 function renderUser(rows) {
-  const tb = document.getElementById("user-body");
-  if(!tb) return;
-  tb.innerHTML = "";
-  (rows || []).forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
-    tb.appendChild(tr);
-  });
+    const tb = document.getElementById("user-body");
+    if(!tb) return;
+    tb.innerHTML = "";
+    (rows || []).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
+        tb.appendChild(tr);
+    });
 }
 
 // PHP Sync (Submit Scores)
 async function sendScoreToServer(entry) {
-  try {
-    const body = new URLSearchParams({
-      username: entry.username,
-      puzzle_type: "memory",
-      difficulty: entry.difficulty,
-      time: entry.completion_time,
-      mistakes: entry.mistakes,
-      outcome: entry.outcome
-    });
-    await fetch("php/submit_score.php", { method: "POST", body });
-  } catch (e) {
-    console.warn("Server not reachable (using local only)", e);
-  }
+    try {
+        const body = new URLSearchParams({
+        username: entry.username,
+        puzzle_type: "memory",
+        difficulty: entry.difficulty,
+        time: entry.completion_time,
+        mistakes: entry.mistakes,
+        outcome: entry.outcome
+        });
+        await fetch("php/submit_score.php", { method: "POST", body });
+    } catch (e) {
+        console.warn("Server not reachable (using local only)", e);
+    }
 }
 
 // Multiplayer Logic
 function showMPOverlay(title, contentHTML, actionsHTML) {
-  mpTitle.textContent = title;
-  mpContent.innerHTML = contentHTML;
-  mpActions.innerHTML = actionsHTML;
-  mpOverlay.classList.remove("hidden");
+    mpTitle.textContent = title;
+    mpContent.innerHTML = contentHTML;
+    mpActions.innerHTML = actionsHTML;
+    mpOverlay.classList.remove("hidden");
 }
 function hideMPOverlay() { mpOverlay.classList.add("hidden"); }
 
@@ -580,51 +580,51 @@ function launchMPGame(serverSequence, serverDiff) {
 
 // Statistics Chart
 document.addEventListener("DOMContentLoaded", () => {
-  const chartCanvas = document.getElementById('progressChart');
-  
-  if (hostBtn) hostBtn.addEventListener("click", hostGame);
-  if (joinBtn) joinBtn.addEventListener("click", openJoinModal);
+    const chartCanvas = document.getElementById('progressChart');
+    
+    if (hostBtn) hostBtn.addEventListener("click", hostGame);
+    if (joinBtn) joinBtn.addEventListener("click", openJoinModal);
 
-  if (!chartCanvas || typeof Chart === 'undefined') return;
+    if (!chartCanvas || typeof Chart === 'undefined') return;
 
-  fetch(`php/stats.php?username=${username}`)
-    .then(response => response.json())
-    .then(data => {
-      const labels = data.map(row => row.created_at);
-      const times = data.map(row => row.completion_time);
+    fetch(`php/stats.php?username=${username}`)
+        .then(response => response.json())
+        .then(data => {
+        const labels = data.map(row => row.created_at);
+        const times = data.map(row => row.completion_time);
 
-      const ctx = chartCanvas.getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Completion Time (seconds)',
-            data: times,
-            borderColor: 'rgba(204, 51, 255, 0.8)',
-            backgroundColor: 'rgba(204, 51, 255, 0.1)',
-            fill: true,
-            tension: 0.3
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: true, text: 'Player Progress', color: '#fff' },
-            legend: { labels: { color: '#fff' } }
-          },
-          scales: {
-            x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
-            y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
-          }
-        }
-      });
-    })
-    .catch(err => console.log("Chart load skipped"));
-});
+        const ctx = chartCanvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+            labels: labels,
+            datasets: [{
+                label: 'Completion Time (seconds)',
+                data: times,
+                borderColor: 'rgba(204, 51, 255, 0.8)',
+                backgroundColor: 'rgba(204, 51, 255, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+            },
+            options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Player Progress', color: '#fff' },
+                legend: { labels: { color: '#fff' } }
+            },
+            scales: {
+                x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
+                y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
+            }
+            }
+        });
+        })
+        .catch(err => console.log("Chart load skipped"));
+    });
 
 if(showStatsBtn) {
     showStatsBtn.addEventListener("click", () => {
-      statsSection.classList.toggle("hidden");
+        statsSection.classList.toggle("hidden");
     });
 }
