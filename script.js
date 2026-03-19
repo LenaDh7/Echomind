@@ -93,6 +93,11 @@ function pushLeaderboard(entry) {
 window.addEventListener("load", () => {
     if(window.WitchlightParticles) P_login = WitchlightParticles.mount("particles-login");
     loadState();
+    // Use PHP session username if available
+    if(typeof PHP_USERNAME !== 'undefined' && PHP_USERNAME) {
+        username = PHP_USERNAME;
+        saveState();
+    }
 });
 
 // About / Sound / Reset
@@ -100,6 +105,10 @@ if(aboutBtnLogin) aboutBtnLogin.addEventListener("click", () => aboutOverlay.cla
 if(aboutBtnPre) aboutBtnPre.addEventListener("click", () => aboutOverlay.classList.remove("hidden"));
 if(aboutBtnGame) aboutBtnGame.addEventListener("click", () => aboutOverlay.classList.remove("hidden"));
 if(aboutClose) aboutClose.addEventListener("click", () => aboutOverlay.classList.add("hidden"));
+if(logoutBtn) logoutBtn.addEventListener("click", () => {
+    username = ""; difficulty = 0; saveState();
+    window.location.href = "logout.php";
+});
 
 function setMuted(m) {
     muted = m;
@@ -121,7 +130,9 @@ if(resetBtn) resetBtn.addEventListener("click", () => {
 
 // Login / Navigation
 if(loginBtn) loginBtn.addEventListener("click", async () => {
-    const u = (usernameInput.value || "").trim() || "Witchlight";
+    const u = (typeof PHP_USERNAME !== 'undefined' && PHP_USERNAME) 
+        ? PHP_USERNAME 
+        : ((usernameInput ? usernameInput.value.trim() : "") || "Witchlight");
     username = u; saveState();
     loginSection.classList.add("hidden");
     prestartSection.classList.remove("hidden");
