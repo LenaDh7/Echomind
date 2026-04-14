@@ -4,19 +4,19 @@ include 'php/db_connect.php';
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
+    $email    = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT username, password FROM userdata WHERE email = ?");
+    $stmt = $conn->prepare("SELECT username, password_hash, role FROM players WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $stmt->store_result();
-    $stmt->bind_result($db_username, $db_password);
+    $stmt->bind_result($db_username, $db_password, $db_role);
     $stmt->fetch();
 
     if ($stmt->num_rows > 0 && password_verify($password, $db_password)) {
-        $_SESSION['email'] = $email;
         $_SESSION['username'] = $db_username;
+        $_SESSION['role']     = $db_role ?? 'player';
         header("Location: index.php");
         exit();
     } else {
