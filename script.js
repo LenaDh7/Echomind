@@ -69,6 +69,43 @@ let gameStarted = false;
 const SKEY   = "echomind_local_progress_v1";
 const LBOARD = "echomind_local_leaderboard_v1";
 
+// ─── Shape Memory state ────────────────────────────────────────────────────
+let shapeCards   = [];
+let shapeFlipped = [];
+let shapeLocked  = false;
+let shapePairs   = 0;
+let shapeMatched = 0;
+
+// 18 shape definitions
+const SHAPES = [
+    { name:"circle",    color:"#4ade80", draw:s=>`<circle cx="50" cy="50" r="34" fill="${s.color}"/>` },
+    { name:"triangle",  color:"#facc15", draw:s=>`<polygon points="50,14 88,82 12,82" fill="${s.color}"/>` },
+    { name:"square",    color:"#22d3ee", draw:s=>`<rect x="16" y="16" width="68" height="68" rx="6" fill="${s.color}"/>` },
+    { name:"diamond",   color:"#f472b6", draw:s=>`<polygon points="50,10 88,50 50,90 12,50" fill="${s.color}"/>` },
+    { name:"star",      color:"#fb923c", draw:s=>`<polygon points="50,8 61,35 90,35 67,54 76,82 50,64 24,82 33,54 10,35 39,35" fill="${s.color}"/>` },
+    { name:"hexagon",   color:"#c084fc", draw:s=>`<polygon points="50,10 86,30 86,70 50,90 14,70 14,30" fill="${s.color}"/>` },
+    { name:"pentagon",  color:"#a3e635", draw:s=>`<polygon points="50,10 90,38 74,84 26,84 10,38" fill="${s.color}"/>` },
+    { name:"crescent",  color:"#f9a8d4", draw:s=>`<path d="M50,15 A35,35 0 1,0 50,85 A22,22 0 1,1 50,15Z" fill="${s.color}"/>` },
+    { name:"cross",     color:"#f87171", draw:s=>`<path d="M38,10 h24 v28 h28 v24 h-28 v28 h-24 v-28 h-28 v-24 h28 z" fill="${s.color}"/>` },
+    { name:"heart",     color:"#fb7185", draw:s=>`<path d="M50,80 C50,80 10,52 10,28 A20,20 0 0,1 50,22 A20,20 0 0,1 90,28 C90,52 50,80 50,80Z" fill="${s.color}"/>` },
+    { name:"arrow",     color:"#2dd4bf", draw:s=>`<polygon points="50,10 90,50 68,50 68,90 32,90 32,50 10,50" fill="${s.color}"/>` },
+    { name:"lightning", color:"#fbbf24", draw:s=>`<polygon points="58,10 30,54 50,54 42,90 70,46 50,46" fill="${s.color}"/>` },
+    { name:"droplet",   color:"#38bdf8", draw:s=>`<path d="M50,10 Q80,45 80,62 A30,30 0 0,1 20,62 Q20,45 50,10Z" fill="${s.color}"/>` },
+    { name:"shield",    color:"#818cf8", draw:s=>`<path d="M50,10 L88,28 L88,58 Q88,80 50,92 Q12,80 12,58 L12,28 Z" fill="${s.color}"/>` },
+    { name:"flower",    color:"#f59e0b", draw:s=>`<circle cx="50" cy="30" r="16" fill="${s.color}"/><circle cx="50" cy="70" r="16" fill="${s.color}"/><circle cx="30" cy="50" r="16" fill="${s.color}"/><circle cx="70" cy="50" r="16" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="${s.color}" opacity="0.7"/>` },
+    { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#1a0030"/><circle cx="44" cy="44" r="5" fill="rgba(255,255,255,0.9)"/>` },
+    { name:"spiral",    color:"#f97316", draw:s=>`<path d="M50,50 m-2,0 a2,2 0 0,1 4,0 a6,6 0 0,1 -12,0 a12,12 0 0,1 24,0 a18,18 0 0,1 -36,0 a24,24 0 0,1 48,0" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="3" fill="${s.color}"/>` },
+    { name:"clover",    color:"#34d399", draw:s=>`<circle cx="50" cy="32" r="18" fill="${s.color}"/><circle cx="68" cy="62" r="18" fill="${s.color}"/><circle cx="32" cy="62" r="18" fill="${s.color}"/><rect x="46" y="46" width="8" height="36" rx="4" fill="${s.color}"/>` },
+];
+
+// ─── Preview duration per difficulty tier ──────────────────────────────────
+function getShapePreviewMs(diff) {
+    if (diff <= 1) return 10000;
+    if (diff <= 3) return 20000;
+    if (diff <= 5) return 30000;
+    return 45000;
+}
+
 // ─── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
     loadState();
@@ -79,7 +116,6 @@ window.addEventListener("load", () => {
         startLevelInput.value = difficulty;
         updateSliderUI(difficulty);
     }
-    // Delay marker build so layout is fully painted
     setTimeout(buildSliderMarkers, 150);
 
     try {
@@ -98,7 +134,6 @@ window.addEventListener("load", () => {
     refreshBoards();
     if (role === 'teacher' && dashOverlay) loadDashboard();
 
-    // Stats modal close
     document.getElementById("stats-modal-close")?.addEventListener("click", () => {
         document.getElementById("stats-modal")?.classList.add("hidden");
     });
@@ -110,6 +145,7 @@ document.querySelectorAll(".puzzle-card:not(.locked)").forEach(card => {
         document.querySelectorAll(".puzzle-card").forEach(c => c.classList.remove("selected"));
         card.classList.add("selected");
         selectedPuzzle = card.dataset.puzzle;
+        if (startLevelInput) updateSliderUI(startLevelInput.value);
     });
 });
 
@@ -118,9 +154,17 @@ function updateSliderUI(val) {
     const n = parseInt(val);
     if (levelDisplay) levelDisplay.textContent = n;
     if (levelHint) {
-        if (n < 3)      levelHint.textContent = "3×3 grid · Beginner";
-        else if (n < 7) levelHint.textContent = "4×4 grid · Intermediate";
-        else            levelHint.textContent = "5×5 grid · Advanced";
+        if (selectedPuzzle === "shape") {
+            if (n <= 1)      levelHint.textContent = "2×2 grid · 2 pairs · 10s preview";
+            else if (n <= 3) levelHint.textContent = "4×2 grid · 4 pairs · 20s preview";
+            else if (n <= 5) levelHint.textContent = "4×4 grid · 8 pairs · 30s preview";
+            else if (n <= 7) levelHint.textContent = "6×4 grid · 12 pairs · 45s preview";
+            else             levelHint.textContent = "6×6 grid · 18 pairs · 45s preview";
+        } else {
+            if (n < 3)      levelHint.textContent = "3×3 grid · Beginner";
+            else if (n < 7) levelHint.textContent = "4×4 grid · Intermediate";
+            else            levelHint.textContent = "5×5 grid · Advanced";
+        }
     }
 }
 
@@ -129,16 +173,13 @@ function buildSliderMarkers() {
     const markers = document.getElementById("slider-markers");
     if (!slider || !markers) return;
     markers.innerHTML = "";
-    const thumbW  = 20;
-    const total   = 10;
-    const trackW  = slider.offsetWidth;
+    const thumbW = 20, total = 10, trackW = slider.offsetWidth;
     if (trackW === 0) { setTimeout(buildSliderMarkers, 100); return; }
-    const usable  = trackW - thumbW; // actual travel distance of thumb centre
+    const usable = trackW - thumbW;
     for (let i = 0; i <= total; i++) {
         const s = document.createElement("span");
         s.textContent = i;
-        const px = (i / total) * usable + (thumbW / 2);
-        s.style.left = px + "px";
+        s.style.left = ((i / total) * usable + (thumbW / 2)) + "px";
         markers.appendChild(s);
     }
 }
@@ -158,7 +199,12 @@ if (startBtn) {
         prestartSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-        startNewPuzzle();
+
+        if (selectedPuzzle === "shape") {
+            startShapePuzzle();
+        } else {
+            startNewPuzzle();
+        }
     });
 }
 
@@ -188,6 +234,23 @@ if (resetBtn) resetBtn.addEventListener("click", () => {
 // ─── Logout ────────────────────────────────────────────────────────────────
 if (logoutBtn) logoutBtn.addEventListener("click", () => { window.location.href = "logout.php"; });
 
+// ─── Back to puzzle selection ───────────────────────────────────────────────
+const backBtn = document.getElementById("back-btn");
+if (backBtn) backBtn.addEventListener("click", () => {
+    clearInterval(window.__t);
+    clearInterval(window.__countdown);
+    gameSection.classList.add("hidden");
+    prestartSection.classList.remove("hidden");
+    puzzleEl.innerHTML = "";
+    puzzleEl.className = "";
+    overlay.classList.add("hidden");
+    statusEl.textContent = "";
+    timerEl.textContent = "Time: 0.0s";
+    flashing = false;
+    shapeFlipped = [];
+    shapeLocked = false;
+});
+
 // ─── Local storage ─────────────────────────────────────────────────────────
 function loadState() {
     try {
@@ -205,20 +268,25 @@ function pushLeaderboard(entry) {
     refreshBoards();
 }
 
-// ─── Game logic ────────────────────────────────────────────────────────────
+// ─── Give Up ───────────────────────────────────────────────────────────────
 if (giveupBtn) giveupBtn.addEventListener("click", () => {
+    clearInterval(window.__t);
+    clearInterval(window.__countdown);
     const timeSec = startMs ? (Date.now() - startMs) / 1000 : 0;
-    const entry = { username, difficulty, completion_time: timeSec, mistakes, outcome: "giveup" };
+    const entry = { username, puzzle_type: selectedPuzzle, difficulty, completion_time: timeSec, mistakes, outcome: "giveup" };
     pushLeaderboard(entry);
     sendScoreToServer(entry);
     difficulty = heuristicNext(difficulty, timeSec, mistakes);
     saveState();
-    startNewPuzzle();
+    if (selectedPuzzle === "shape") startShapePuzzle();
+    else startNewPuzzle();
 });
 
+// ─── Witchlight Memory ─────────────────────────────────────────────────────
 function startNewPuzzle() {
     overlay.classList.add("hidden");
     puzzleEl.innerHTML = "";
+    puzzleEl.className = "";
     mistakes = 0; sequence = []; playerIndex = 0;
 
     let size = 3;
@@ -279,7 +347,7 @@ async function onSolved() {
     statusEl.textContent = "Puzzle solved! ✨";
     try { if (chime) { chime.currentTime = 0; await chime.play(); } } catch(e) {}
 
-    const entry = { username, difficulty, completion_time: parseFloat(timeSec), mistakes, outcome: "win" };
+    const entry = { username, puzzle_type: selectedPuzzle, difficulty, completion_time: parseFloat(timeSec), mistakes, outcome: "win" };
     pushLeaderboard(entry);
     sendScoreToServer(entry);
 
@@ -292,16 +360,205 @@ async function onSolved() {
 if (continueBtn) continueBtn.addEventListener("click", () => {
     overlay.classList.add("hidden");
     difficulty = heuristicNext(difficulty, parseFloat(resTime.textContent), parseInt(resMistakes.textContent));
-    saveState(); startNewPuzzle();
+    saveState();
+    if (selectedPuzzle === "shape") startShapePuzzle();
+    else startNewPuzzle();
 });
 
 if (retryBtn) retryBtn.addEventListener("click", () => {
     overlay.classList.add("hidden");
-    sendScoreToServer({ username, difficulty, completion_time: 0, mistakes, outcome: "retry" });
-    playerIndex = 0; startMs = 0;
-    timerEl.textContent = "Time: 0.0s";
-    flashSequence();
+    sendScoreToServer({ username, puzzle_type: selectedPuzzle, difficulty, completion_time: 0, mistakes, outcome: "retry" });
+    if (selectedPuzzle === "shape") {
+        startShapePuzzle();
+    } else {
+        playerIndex = 0; startMs = 0;
+        timerEl.textContent = "Time: 0.0s";
+        flashSequence();
+    }
 });
+
+// ─── Shape Memory ──────────────────────────────────────────────────────────
+function getShapeGrid(diff) {
+    if (diff <= 1) return { cols: 2, rows: 2 };
+    if (diff <= 3) return { cols: 4, rows: 2 };
+    if (diff <= 5) return { cols: 4, rows: 4 };
+    if (diff <= 7) return { cols: 6, rows: 4 };
+    return              { cols: 6, rows: 6 };
+}
+
+function startShapePuzzle() {
+    // Kill any running timers from a previous round
+    clearInterval(window.__t);
+    clearInterval(window.__countdown);
+
+    overlay.classList.add("hidden");
+    puzzleEl.innerHTML = "";
+    puzzleEl.className = "shape-grid";
+    mistakes     = 0;
+    shapeFlipped = [];
+    shapeLocked  = false;
+    shapeMatched = 0;
+    startMs      = 0;   // reset — timer must NOT start during preview
+
+    const { cols, rows } = getShapeGrid(difficulty);
+    shapePairs = (cols * rows) / 2;
+
+    const chosen   = [...SHAPES].sort(() => Math.random() - 0.5).slice(0, shapePairs);
+    const cardData = [];
+    chosen.forEach((shape, pairIdx) => {
+        cardData.push({ pairIdx, shape });
+        cardData.push({ pairIdx, shape });
+    });
+    cardData.sort(() => Math.random() - 0.5);
+
+    puzzleEl.style.gridTemplateColumns = `repeat(${cols}, var(--shape-tile))`;
+
+    const maxW     = Math.floor((window.innerWidth  * 0.88) / cols) - 10;
+    const maxH     = Math.floor((window.innerHeight * 0.62) / rows) - 10;
+    const tileSize = Math.max(44, Math.min(88, maxW, maxH));
+    puzzleEl.style.setProperty("--shape-tile", tileSize + "px");
+
+    shapeCards = cardData.map((data, i) => {
+        const wrap  = document.createElement("div");
+        wrap.className = "shape-card";
+
+        const inner = document.createElement("div");
+        inner.className = "shape-card-inner";
+
+        const front = document.createElement("div");
+        front.className = "shape-card-front";
+        front.innerHTML = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${data.shape.draw(data.shape)}</svg>`;
+
+        const back = document.createElement("div");
+        back.className = "shape-card-back";
+        back.innerHTML = `<span class="card-back-rune">✦</span>`;
+
+        inner.appendChild(front);
+        inner.appendChild(back);
+        wrap.appendChild(inner);
+        puzzleEl.appendChild(wrap);
+
+        const card = {
+            id: i, pairIdx: data.pairIdx, shape: data.shape,
+            el: wrap, inner, matched: false, faceUp: false
+        };
+        wrap.addEventListener("click", () => onShapeCardClick(card));
+        return card;
+    });
+
+    diffEl.textContent = difficulty;
+
+    // ── Preview: reveal all cards face-up instantly via .previewing class ──
+    // Using a CSS class (not inline styles) avoids conflicts with .revealed
+    // and .shape-matched which also target .shape-card-inner transform.
+    // The .previewing rule sets transition:none so the flip is instant.
+    requestAnimationFrame(() => {
+        shapeCards.forEach(c => {
+            c.el.classList.add("previewing");
+            c.faceUp = true;
+        });
+    });
+
+    const previewMs  = getShapePreviewMs(difficulty);
+    const previewEnd = Date.now() + previewMs;
+    statusEl.textContent = `Memorise the pairs… (${previewMs / 1000}s)`;
+
+    // Date-based countdown — immune to interval jitter
+    window.__countdown = setInterval(() => {
+        const remaining = Math.ceil((previewEnd - Date.now()) / 1000);
+        if (remaining > 0) {
+            statusEl.textContent = `Memorise the pairs… (${remaining}s)`;
+        } else {
+            clearInterval(window.__countdown);
+        }
+    }, 250);
+
+    setTimeout(() => {
+        clearInterval(window.__countdown);
+        statusEl.textContent = "Get ready…";
+
+        // Staggered hide-wave in randomised order
+        const indices   = shapeCards.map((_, i) => i).sort(() => Math.random() - 0.5);
+        const staggerMs = Math.min(55, 700 / shapeCards.length);
+
+        indices.forEach((cardIdx, i) => {
+            setTimeout(() => {
+                const c = shapeCards[cardIdx];
+                if (!c.matched) {
+                    c.el.classList.remove("previewing");
+                    c.faceUp = false;
+                }
+            }, i * staggerMs);
+        });
+
+        // ── Start timer ONLY after all cards are hidden ──
+        const totalHideMs = shapeCards.length * staggerMs + 500;
+        setTimeout(() => {
+            statusEl.textContent = `Find all ${shapePairs} pairs!`;
+            startMs = Date.now();   // set HERE — not before preview
+            startTimer();
+        }, totalHideMs);
+
+    }, previewMs);
+}
+
+function onShapeCardClick(card) {
+    if (shapeLocked)              return;
+    if (card.matched)             return;
+    if (card.faceUp)              return;
+    if (shapeFlipped.length >= 2) return;
+
+    // Flip card face-up via .revealed class (CSS transition applies normally)
+    card.el.classList.add("revealed");
+    card.faceUp = true;
+    shapeFlipped.push(card);
+
+    if (shapeFlipped.length === 2) {
+        shapeLocked = true;
+        const [a, b] = shapeFlipped;
+
+        if (a.pairIdx === b.pairIdx) {
+            // Match!
+            setTimeout(() => {
+                a.el.classList.add("shape-matched");
+                b.el.classList.add("shape-matched");
+                a.el.classList.remove("revealed");
+                b.el.classList.remove("revealed");
+                a.matched = true; b.matched = true;
+                shapeFlipped = []; shapeLocked = false;
+                shapeMatched++;
+                if (shapeMatched === shapePairs) onShapeSolved();
+            }, 500);
+        } else {
+            // No match
+            mistakes++;
+            a.el.classList.add("shape-wrong");
+            b.el.classList.add("shape-wrong");
+            setTimeout(() => {
+                a.el.classList.remove("revealed", "shape-wrong");
+                b.el.classList.remove("revealed", "shape-wrong");
+                a.faceUp = false; b.faceUp = false;
+                shapeFlipped = []; shapeLocked = false;
+            }, 900);
+        }
+    }
+}
+
+async function onShapeSolved() {
+    clearInterval(window.__t);
+    const timeSec = ((Date.now() - startMs) / 1000).toFixed(1);
+    statusEl.textContent = "All pairs found! ✨";
+    try { if (chime) { chime.currentTime = 0; await chime.play(); } } catch(e) {}
+
+    const entry = { username, puzzle_type: "shape", difficulty, completion_time: parseFloat(timeSec), mistakes, outcome: "win" };
+    pushLeaderboard(entry);
+    sendScoreToServer(entry);
+
+    resDiff.textContent     = difficulty;
+    resTime.textContent     = timeSec;
+    resMistakes.textContent = mistakes;
+    overlay.classList.remove("hidden");
+}
 
 // ─── Timer / utils ─────────────────────────────────────────────────────────
 function startTimer() {
@@ -318,6 +575,7 @@ function heuristicNext(d, t, m) {
 }
 function fmt(v) { return v?.toFixed ? v.toFixed(2) : v; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function puzzleLabel(pt) { return pt === "shape" ? "🔷 Shape" : "🌙 Memory"; }
 
 // ─── Leaderboard ───────────────────────────────────────────────────────────
 async function fetchLeaderboardFromServer() {
@@ -337,20 +595,31 @@ async function refreshBoards() {
 }
 function renderGlobal(rows) {
     const tb = document.getElementById("global-body"); if (!tb) return; tb.innerHTML = "";
-    (rows||[]).forEach(r => { const tr = document.createElement("tr"); tr.innerHTML = `<td>${r.username}</td><td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`; tb.appendChild(tr); });
+    (rows||[]).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r.username}</td><td>${puzzleLabel(r.puzzle_type)}</td><td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
+        tb.appendChild(tr);
+    });
 }
 function renderUser(rows) {
     const tb = document.getElementById("user-body"); if (!tb) return; tb.innerHTML = "";
-    (rows||[]).forEach(r => { const tr = document.createElement("tr"); tr.innerHTML = `<td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`; tb.appendChild(tr); });
+    (rows||[]).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${puzzleLabel(r.puzzle_type)}</td><td>${r.difficulty}</td><td>${fmt(r.completion_time)}</td><td>${r.mistakes}</td><td>${r.outcome}</td>`;
+        tb.appendChild(tr);
+    });
 }
 
 // ─── Score submit ──────────────────────────────────────────────────────────
 async function sendScoreToServer(entry) {
     try {
         const body = new URLSearchParams({
-            username: entry.username, puzzle_type: selectedPuzzle || "memory",
-            difficulty: entry.difficulty, time: entry.completion_time,
-            mistakes: entry.mistakes, outcome: entry.outcome,
+            username:       entry.username,
+            puzzle_type:    entry.puzzle_type || selectedPuzzle || "memory",
+            difficulty:     entry.difficulty,
+            time:           entry.completion_time,
+            mistakes:       entry.mistakes,
+            outcome:        entry.outcome,
             classroom_code: classroomCode || ""
         });
         await fetch("php/submit_score.php", { method:"POST", body });
@@ -388,7 +657,6 @@ async function loadCharts() {
         chartsLoaded = true;
         const labels = data.map(r => (r.created_at||"").slice(5,16));
 
-        // 1. Completion Time
         new Chart(document.getElementById("chart-time").getContext("2d"), {
             type:"line",
             data:{ labels, datasets:[{
@@ -399,7 +667,6 @@ async function loadCharts() {
             options:{ ...chartDefaults }
         });
 
-        // 2. Difficulty
         new Chart(document.getElementById("chart-diff").getContext("2d"), {
             type:"line",
             data:{ labels, datasets:[{
@@ -413,7 +680,6 @@ async function loadCharts() {
             }}
         });
 
-        // 3. Mistakes
         new Chart(document.getElementById("chart-mistakes").getContext("2d"), {
             type:"bar",
             data:{ labels, datasets:[{
@@ -424,10 +690,7 @@ async function loadCharts() {
             options:{ ...chartDefaults }
         });
 
-        // 4. Outcomes (doughnut)
-        const outcomes = data.reduce((acc, r) => {
-            acc[r.outcome] = (acc[r.outcome] || 0) + 1; return acc;
-        }, {});
+        const outcomes = data.reduce((acc, r) => { acc[r.outcome] = (acc[r.outcome]||0)+1; return acc; }, {});
         new Chart(document.getElementById("chart-outcomes").getContext("2d"), {
             type:"doughnut",
             data:{
@@ -534,7 +797,7 @@ function launchMPGame(serverSeq, serverDiff) {
     prestartSection.classList.add("hidden"); gameSection.classList.remove("hidden");
     if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
     difficulty=serverDiff||0; sequence=serverSeq;
-    overlay.classList.add("hidden"); puzzleEl.innerHTML=""; mistakes=0; playerIndex=0;
+    overlay.classList.add("hidden"); puzzleEl.innerHTML=""; puzzleEl.className=""; mistakes=0; playerIndex=0;
     let size=3; if(difficulty>=3&&difficulty<7)size=4; else if(difficulty>=7)size=5;
     puzzleEl.style.gridTemplateColumns=`repeat(${size},var(--tile))`;
     for(let i=0;i<size*size;i++){const t=document.createElement("div");t.className="tile";t.dataset.index=i;t.addEventListener("click",()=>onTileClick(i,t));puzzleEl.appendChild(t);}
@@ -588,7 +851,7 @@ function renderDashboard(data) {
                 <div class="student-score-name">👤 ${student}</div>
                 <table style="width:100%;font-size:.78rem;">
                     <thead><tr><th>Puzzle</th><th>Diff</th><th>Time</th><th>Mistakes</th><th>Result</th></tr></thead>
-                    <tbody>${scores.map(sc=>`<tr><td>${sc.puzzle_type}</td><td>${sc.difficulty}</td><td>${parseFloat(sc.completion_time).toFixed(1)}s</td><td>${sc.mistakes}</td><td>${sc.outcome}</td></tr>`).join("")}</tbody>
+                    <tbody>${scores.map(sc=>`<tr><td>${puzzleLabel(sc.puzzle_type)}</td><td>${sc.difficulty}</td><td>${parseFloat(sc.completion_time).toFixed(1)}s</td><td>${sc.mistakes}</td><td>${sc.outcome}</td></tr>`).join("")}</tbody>
                 </table>
             </div>`).join("");
     } else { scoresSection.style.display="none"; }

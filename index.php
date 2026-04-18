@@ -31,25 +31,32 @@ $classroom_code = $_SESSION['classroom_code'] ?? null;
       <h2>Welcome, <span id="playername"></span></h2>
       <p class="hint">Choose your puzzle and starting level.</p>
 
+      <!-- ── Puzzle Cards ─────────────────────────────────────────────── -->
       <div class="puzzle-cards">
+
         <div class="puzzle-card selected" data-puzzle="memory">
           <div class="card-icon">🌙</div>
           <div class="card-title">Witchlight Memory</div>
           <div class="card-desc">Watch the pattern of lights and repeat the sequence.</div>
         </div>
-        <div class="puzzle-card locked" data-puzzle="echo">
-          <div class="card-icon">🔮</div>
-          <div class="card-title">Echo Rhythm</div>
-          <div class="card-desc">Coming soon — rhythm-based memory.</div>
-          <div class="card-lock">🔒 Coming Soon</div>
+
+        <!-- SHAPE MEMORY — now live -->
+        <div class="puzzle-card" data-puzzle="shape">
+          <div class="card-icon">🔷</div>
+          <div class="card-title">Shape Memory</div>
+          <div class="card-desc">Memorise the cards, then find every matching pair.</div>
         </div>
+
+        <!-- VEIL — still coming soon -->
         <div class="puzzle-card locked" data-puzzle="veil">
           <div class="card-icon">✨</div>
           <div class="card-title">Veil Pattern</div>
           <div class="card-desc">Coming soon — visual pattern matching.</div>
           <div class="card-lock">🔒 Coming Soon</div>
         </div>
+
       </div>
+      <!-- ── End Puzzle Cards ─────────────────────────────────────────── -->
 
       <div class="slider-section">
         <div class="level-selector">
@@ -117,27 +124,28 @@ $classroom_code = $_SESSION['classroom_code'] ?? null;
       </div>
     </div>
 
-    <!-- Controls always visible below grid -->
+    <!-- Controls -->
     <div class="controls">
+      <button id="back-btn"    class="ghost small">← Puzzles</button>
       <button id="giveup-btn"  class="ghost small">Give Up</button>
       <button id="logout-btn"  class="ghost small">Logout</button>
       <button id="show-stats"  class="ghost small">📊 Stats</button>
     </div>
 
-    <!-- Leaderboard with internal scroll -->
+    <!-- Leaderboard — Type column added -->
     <div id="boards">
       <div class="dual">
         <div>
           <h3>🏆 Top 10 (Global)</h3>
           <table>
-            <thead><tr><th>User</th><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
+            <thead><tr><th>User</th><th>Type</th><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
             <tbody id="global-body"></tbody>
           </table>
         </div>
         <div>
           <h3>👤 Your Last 10</h3>
           <table>
-            <thead><tr><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
+            <thead><tr><th>Type</th><th>Diff</th><th>Time</th><th>Mist</th><th>Result</th></tr></thead>
             <tbody id="user-body"></tbody>
           </table>
         </div>
