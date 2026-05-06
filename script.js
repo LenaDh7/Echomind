@@ -76,8 +76,11 @@ let shapeLocked  = false;
 let shapePairs   = 0;
 let shapeMatched = 0;
 
-// 18 shape definitions
+// 28 distinct shapes — all SVG paths verified to render correctly.
+// Self-intersecting polygons (bowtie, hourglass) have been replaced with
+// non-intersecting equivalents so they don't appear blank on some renderers.
 const SHAPES = [
+    // ── Original 18 ──────────────────────────────────────────────────────
     { name:"circle",    color:"#4ade80", draw:s=>`<circle cx="50" cy="50" r="34" fill="${s.color}"/>` },
     { name:"triangle",  color:"#facc15", draw:s=>`<polygon points="50,14 88,82 12,82" fill="${s.color}"/>` },
     { name:"square",    color:"#22d3ee", draw:s=>`<rect x="16" y="16" width="68" height="68" rx="6" fill="${s.color}"/>` },
@@ -96,9 +99,29 @@ const SHAPES = [
     { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#1a0030"/><circle cx="44" cy="44" r="5" fill="rgba(255,255,255,0.9)"/>` },
     { name:"spiral",    color:"#f97316", draw:s=>`<path d="M50,50 m-2,0 a2,2 0 0,1 4,0 a6,6 0 0,1 -12,0 a12,12 0 0,1 24,0 a18,18 0 0,1 -36,0 a24,24 0 0,1 48,0" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="3" fill="${s.color}"/>` },
     { name:"clover",    color:"#34d399", draw:s=>`<circle cx="50" cy="32" r="18" fill="${s.color}"/><circle cx="68" cy="62" r="18" fill="${s.color}"/><circle cx="32" cy="62" r="18" fill="${s.color}"/><rect x="46" y="46" width="8" height="36" rx="4" fill="${s.color}"/>` },
+
+    // ── 10 new shapes (all non-self-intersecting) ─────────────────────────
+    { name:"octagon",     color:"#e879f9", draw:s=>`<polygon points="32,10 68,10 90,32 90,68 68,90 32,90 10,68 10,32" fill="${s.color}"/>` },
+    // tag: a right-pointing pentagon (like a label/price tag)
+    { name:"tag",         color:"#fde68a", draw:s=>`<polygon points="10,20 70,20 90,50 70,80 10,80" fill="${s.color}"/>` },
+    // moon: large circle minus smaller offset circle, rendered as a path
+    { name:"moon",        color:"#bef264", draw:s=>`<path d="M72,20 A36,36 0 1,0 72,80 A24,24 0 1,1 72,20Z" fill="${s.color}"/>` },
+    // cloud: three overlapping circles with filled base rect
+    { name:"cloud",       color:"#93c5fd", draw:s=>`<rect x="18" y="56" width="64" height="20" rx="4" fill="${s.color}"/><circle cx="36" cy="56" r="18" fill="${s.color}"/><circle cx="55" cy="46" r="22" fill="${s.color}"/><circle cx="73" cy="56" r="15" fill="${s.color}"/>` },
+    // parallelogram: non-intersecting slanted quad
+    { name:"parallelogram", color:"#a5f3fc", draw:s=>`<polygon points="28,18 88,18 72,82 12,82" fill="${s.color}"/>` },
+    // trapezoid: wider top, narrower bottom
+    { name:"trapezoid",   color:"#fda4af", draw:s=>`<polygon points="18,25 82,25 92,75 8,75" fill="${s.color}"/>` },
+    // burst: 8-point star (non-self-intersecting, alternating radii)
+    { name:"burst",       color:"#86efac", draw:s=>`<polygon points="50,8 58,38 82,18 62,42 92,50 62,58 82,82 58,62 50,92 42,62 18,82 38,58 8,50 38,42 18,18 42,38" fill="${s.color}"/>` },
+    // kite: a proper kite shape
+    { name:"kite",        color:"#f0abfc", draw:s=>`<polygon points="50,8 80,45 50,92 20,45" fill="${s.color}"/>` },
+    // chevron: a right-pointing arrow/chevron
+    { name:"chevron",     color:"#67e8f9", draw:s=>`<polygon points="10,15 60,15 90,50 60,85 10,85 40,50" fill="${s.color}"/>` },
+    // semicircle: half circle flat on bottom
+    { name:"semicircle",  color:"#fca5a5", draw:s=>`<path d="M15,55 A35,35 0 0,1 85,55 Z" fill="${s.color}"/><rect x="15" y="55" width="70" height="6" rx="3" fill="${s.color}"/>` },
 ];
 
-// ─── Preview duration per difficulty tier ──────────────────────────────────
 function getShapePreviewMs(diff) {
     if (diff <= 1) return 10000;
     if (diff <= 3) return 20000;
@@ -199,12 +222,8 @@ if (startBtn) {
         prestartSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-
-        if (selectedPuzzle === "shape") {
-            startShapePuzzle();
-        } else {
-            startNewPuzzle();
-        }
+        if (selectedPuzzle === "shape") startShapePuzzle();
+        else startNewPuzzle();
     });
 }
 
@@ -231,10 +250,8 @@ if (resetBtn) resetBtn.addEventListener("click", () => {
     alert("Progress cleared.");
 });
 
-// ─── Logout ────────────────────────────────────────────────────────────────
 if (logoutBtn) logoutBtn.addEventListener("click", () => { window.location.href = "logout.php"; });
 
-// ─── Back to puzzle selection ───────────────────────────────────────────────
 const backBtn = document.getElementById("back-btn");
 if (backBtn) backBtn.addEventListener("click", () => {
     clearInterval(window.__t);
@@ -246,6 +263,7 @@ if (backBtn) backBtn.addEventListener("click", () => {
     overlay.classList.add("hidden");
     statusEl.textContent = "";
     timerEl.textContent = "Time: 0.0s";
+    startMs = 0;
     flashing = false;
     shapeFlipped = [];
     shapeLocked = false;
@@ -284,10 +302,13 @@ if (giveupBtn) giveupBtn.addEventListener("click", () => {
 
 // ─── Witchlight Memory ─────────────────────────────────────────────────────
 function startNewPuzzle() {
+    clearInterval(window.__t);
     overlay.classList.add("hidden");
     puzzleEl.innerHTML = "";
     puzzleEl.className = "";
     mistakes = 0; sequence = []; playerIndex = 0;
+    startMs = 0;
+    timerEl.textContent = "Time: 0.0s";
 
     let size = 3;
     if (difficulty >= 3 && difficulty < 7) size = 4;
@@ -346,14 +367,10 @@ async function onSolved() {
     const timeSec = ((Date.now() - startMs) / 1000).toFixed(1);
     statusEl.textContent = "Puzzle solved! ✨";
     try { if (chime) { chime.currentTime = 0; await chime.play(); } } catch(e) {}
-
     const entry = { username, puzzle_type: selectedPuzzle, difficulty, completion_time: parseFloat(timeSec), mistakes, outcome: "win" };
     pushLeaderboard(entry);
     sendScoreToServer(entry);
-
-    resDiff.textContent     = difficulty;
-    resTime.textContent     = timeSec;
-    resMistakes.textContent = mistakes;
+    resDiff.textContent = difficulty; resTime.textContent = timeSec; resMistakes.textContent = mistakes;
     overlay.classList.remove("hidden");
 }
 
@@ -387,23 +404,26 @@ function getShapeGrid(diff) {
 }
 
 function startShapePuzzle() {
-    // Kill any running timers from a previous round
+    // Kill ALL running timers before doing anything else
     clearInterval(window.__t);
     clearInterval(window.__countdown);
+    startMs = 0;
+    timerEl.textContent = "Time: 0.0s";
 
     overlay.classList.add("hidden");
     puzzleEl.innerHTML = "";
     puzzleEl.className = "shape-grid";
-    mistakes     = 0;
-    shapeFlipped = [];
-    shapeLocked  = false;
-    shapeMatched = 0;
-    startMs      = 0;   // reset — timer must NOT start during preview
+    mistakes = 0; shapeFlipped = []; shapeLocked = false; shapeMatched = 0;
 
     const { cols, rows } = getShapeGrid(difficulty);
     shapePairs = (cols * rows) / 2;
 
-    const chosen   = [...SHAPES].sort(() => Math.random() - 0.5).slice(0, shapePairs);
+    if (shapePairs > SHAPES.length) {
+        statusEl.textContent = `Error: need ${shapePairs} shapes, only ${SHAPES.length} defined.`;
+        return;
+    }
+
+    const chosen = [...SHAPES].sort(() => Math.random() - 0.5).slice(0, shapePairs);
     const cardData = [];
     chosen.forEach((shape, pairIdx) => {
         cardData.push({ pairIdx, shape });
@@ -412,133 +432,98 @@ function startShapePuzzle() {
     cardData.sort(() => Math.random() - 0.5);
 
     puzzleEl.style.gridTemplateColumns = `repeat(${cols}, var(--shape-tile))`;
-
-    const maxW     = Math.floor((window.innerWidth  * 0.88) / cols) - 10;
-    const maxH     = Math.floor((window.innerHeight * 0.62) / rows) - 10;
+    const maxW = Math.floor((window.innerWidth * 0.88) / cols) - 10;
+    const maxH = Math.floor((window.innerHeight * 0.62) / rows) - 10;
     const tileSize = Math.max(44, Math.min(88, maxW, maxH));
     puzzleEl.style.setProperty("--shape-tile", tileSize + "px");
 
     shapeCards = cardData.map((data, i) => {
-        const wrap  = document.createElement("div");
-        wrap.className = "shape-card";
-
-        const inner = document.createElement("div");
-        inner.className = "shape-card-inner";
-
-        const front = document.createElement("div");
-        front.className = "shape-card-front";
+        const wrap  = document.createElement("div"); wrap.className = "shape-card";
+        const inner = document.createElement("div"); inner.className = "shape-card-inner";
+        const front = document.createElement("div"); front.className = "shape-card-front";
         front.innerHTML = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${data.shape.draw(data.shape)}</svg>`;
-
-        const back = document.createElement("div");
-        back.className = "shape-card-back";
+        const back  = document.createElement("div"); back.className = "shape-card-back";
         back.innerHTML = `<span class="card-back-rune">✦</span>`;
-
-        inner.appendChild(front);
-        inner.appendChild(back);
-        wrap.appendChild(inner);
-        puzzleEl.appendChild(wrap);
-
-        const card = {
-            id: i, pairIdx: data.pairIdx, shape: data.shape,
-            el: wrap, inner, matched: false, faceUp: false
-        };
+        inner.appendChild(front); inner.appendChild(back);
+        wrap.appendChild(inner); puzzleEl.appendChild(wrap);
+        const card = { id:i, pairIdx:data.pairIdx, shape:data.shape, el:wrap, inner, matched:false, faceUp:false };
         wrap.addEventListener("click", () => onShapeCardClick(card));
         return card;
     });
 
     diffEl.textContent = difficulty;
 
-    // ── Preview: reveal all cards face-up instantly via .previewing class ──
-    // Using a CSS class (not inline styles) avoids conflicts with .revealed
-    // and .shape-matched which also target .shape-card-inner transform.
-    // The .previewing rule sets transition:none so the flip is instant.
+    // ── Reveal all cards face-up for the preview phase ──────────────────
+    // We wait for TWO paint frames so every card element is fully laid out
+    // before the CSS flip fires. previewEnd is captured INSIDE the callback
+    // so the countdown reflects real elapsed time, not time including rAF lag.
     requestAnimationFrame(() => {
-        shapeCards.forEach(c => {
-            c.el.classList.add("previewing");
-            c.faceUp = true;
+        requestAnimationFrame(() => {
+            // Add previewing class — instant face-up, no transition
+            shapeCards.forEach(c => {
+                c.el.classList.add("previewing");
+                c.faceUp = true;
+            });
+
+            // Capture previewEnd NOW, after the two frames have passed
+            const previewMs  = getShapePreviewMs(difficulty);
+            const previewEnd = Date.now() + previewMs;
+
+            statusEl.textContent = `Memorise the pairs… (${previewMs / 1000}s)`;
+
+            window.__countdown = setInterval(() => {
+                const remaining = Math.ceil((previewEnd - Date.now()) / 1000);
+                if (remaining > 0) statusEl.textContent = `Memorise the pairs… (${remaining}s)`;
+                else clearInterval(window.__countdown);
+            }, 250);
+
+            setTimeout(() => {
+                clearInterval(window.__countdown);
+                statusEl.textContent = "Get ready…";
+
+                // Staggered hide-wave
+                const indices   = shapeCards.map((_, i) => i).sort(() => Math.random() - 0.5);
+                const staggerMs = Math.min(55, 700 / shapeCards.length);
+                indices.forEach((cardIdx, i) => {
+                    setTimeout(() => {
+                        const c = shapeCards[cardIdx];
+                        if (!c.matched) { c.el.classList.remove("previewing"); c.faceUp = false; }
+                    }, i * staggerMs);
+                });
+
+                // Start timer only after all cards are fully hidden
+                const totalHideMs = shapeCards.length * staggerMs + 500;
+                setTimeout(() => {
+                    statusEl.textContent = `Find all ${shapePairs} pairs!`;
+                    startMs = Date.now();
+                    startTimer();
+                }, totalHideMs);
+
+            }, previewMs);
         });
     });
-
-    const previewMs  = getShapePreviewMs(difficulty);
-    const previewEnd = Date.now() + previewMs;
-    statusEl.textContent = `Memorise the pairs… (${previewMs / 1000}s)`;
-
-    // Date-based countdown — immune to interval jitter
-    window.__countdown = setInterval(() => {
-        const remaining = Math.ceil((previewEnd - Date.now()) / 1000);
-        if (remaining > 0) {
-            statusEl.textContent = `Memorise the pairs… (${remaining}s)`;
-        } else {
-            clearInterval(window.__countdown);
-        }
-    }, 250);
-
-    setTimeout(() => {
-        clearInterval(window.__countdown);
-        statusEl.textContent = "Get ready…";
-
-        // Staggered hide-wave in randomised order
-        const indices   = shapeCards.map((_, i) => i).sort(() => Math.random() - 0.5);
-        const staggerMs = Math.min(55, 700 / shapeCards.length);
-
-        indices.forEach((cardIdx, i) => {
-            setTimeout(() => {
-                const c = shapeCards[cardIdx];
-                if (!c.matched) {
-                    c.el.classList.remove("previewing");
-                    c.faceUp = false;
-                }
-            }, i * staggerMs);
-        });
-
-        // ── Start timer ONLY after all cards are hidden ──
-        const totalHideMs = shapeCards.length * staggerMs + 500;
-        setTimeout(() => {
-            statusEl.textContent = `Find all ${shapePairs} pairs!`;
-            startMs = Date.now();   // set HERE — not before preview
-            startTimer();
-        }, totalHideMs);
-
-    }, previewMs);
 }
 
 function onShapeCardClick(card) {
-    if (shapeLocked)              return;
-    if (card.matched)             return;
-    if (card.faceUp)              return;
-    if (shapeFlipped.length >= 2) return;
-
-    // Flip card face-up via .revealed class (CSS transition applies normally)
-    card.el.classList.add("revealed");
-    card.faceUp = true;
-    shapeFlipped.push(card);
-
+    if (shapeLocked || card.matched || card.faceUp || shapeFlipped.length >= 2) return;
+    card.el.classList.add("revealed"); card.faceUp = true; shapeFlipped.push(card);
     if (shapeFlipped.length === 2) {
         shapeLocked = true;
         const [a, b] = shapeFlipped;
-
         if (a.pairIdx === b.pairIdx) {
-            // Match!
             setTimeout(() => {
-                a.el.classList.add("shape-matched");
-                b.el.classList.add("shape-matched");
-                a.el.classList.remove("revealed");
-                b.el.classList.remove("revealed");
+                a.el.classList.add("shape-matched"); b.el.classList.add("shape-matched");
+                a.el.classList.remove("revealed"); b.el.classList.remove("revealed");
                 a.matched = true; b.matched = true;
-                shapeFlipped = []; shapeLocked = false;
-                shapeMatched++;
+                shapeFlipped = []; shapeLocked = false; shapeMatched++;
                 if (shapeMatched === shapePairs) onShapeSolved();
             }, 500);
         } else {
-            // No match
             mistakes++;
-            a.el.classList.add("shape-wrong");
-            b.el.classList.add("shape-wrong");
+            a.el.classList.add("shape-wrong"); b.el.classList.add("shape-wrong");
             setTimeout(() => {
-                a.el.classList.remove("revealed", "shape-wrong");
-                b.el.classList.remove("revealed", "shape-wrong");
-                a.faceUp = false; b.faceUp = false;
-                shapeFlipped = []; shapeLocked = false;
+                a.el.classList.remove("revealed","shape-wrong"); b.el.classList.remove("revealed","shape-wrong");
+                a.faceUp = false; b.faceUp = false; shapeFlipped = []; shapeLocked = false;
             }, 900);
         }
     }
@@ -549,14 +534,9 @@ async function onShapeSolved() {
     const timeSec = ((Date.now() - startMs) / 1000).toFixed(1);
     statusEl.textContent = "All pairs found! ✨";
     try { if (chime) { chime.currentTime = 0; await chime.play(); } } catch(e) {}
-
     const entry = { username, puzzle_type: "shape", difficulty, completion_time: parseFloat(timeSec), mistakes, outcome: "win" };
-    pushLeaderboard(entry);
-    sendScoreToServer(entry);
-
-    resDiff.textContent     = difficulty;
-    resTime.textContent     = timeSec;
-    resMistakes.textContent = mistakes;
+    pushLeaderboard(entry); sendScoreToServer(entry);
+    resDiff.textContent = difficulty; resTime.textContent = timeSec; resMistakes.textContent = mistakes;
     overlay.classList.remove("hidden");
 }
 
@@ -564,6 +544,7 @@ async function onShapeSolved() {
 function startTimer() {
     clearInterval(window.__t);
     window.__t = setInterval(() => {
+        if (!startMs) return;
         timerEl.textContent = `Time: ${((Date.now() - startMs) / 1000).toFixed(1)}s`;
     }, 250);
 }
@@ -579,11 +560,8 @@ function puzzleLabel(pt) { return pt === "shape" ? "🔷 Shape" : "🌙 Memory";
 
 // ─── Leaderboard ───────────────────────────────────────────────────────────
 async function fetchLeaderboardFromServer() {
-    try {
-        const res = await fetch("php/fetch_leaderboard.php");
-        if (!res.ok) return [];
-        return await res.json();
-    } catch { return []; }
+    try { const res = await fetch("php/fetch_leaderboard.php"); if (!res.ok) return []; return await res.json(); }
+    catch { return []; }
 }
 async function refreshBoards() {
     const local = JSON.parse(localStorage.getItem(LBOARD) || "[]");
@@ -614,100 +592,145 @@ function renderUser(rows) {
 async function sendScoreToServer(entry) {
     try {
         const body = new URLSearchParams({
-            username:       entry.username,
-            puzzle_type:    entry.puzzle_type || selectedPuzzle || "memory",
-            difficulty:     entry.difficulty,
-            time:           entry.completion_time,
-            mistakes:       entry.mistakes,
-            outcome:        entry.outcome,
-            classroom_code: classroomCode || ""
+            username: entry.username, puzzle_type: entry.puzzle_type || selectedPuzzle || "memory",
+            difficulty: entry.difficulty, time: entry.completion_time,
+            mistakes: entry.mistakes, outcome: entry.outcome, classroom_code: classroomCode || ""
         });
         await fetch("php/submit_score.php", { method:"POST", body });
     } catch(e) {}
 }
 
-// ─── Stats chart ───────────────────────────────────────────────────────────
-let chartsLoaded = false;
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── Stats Modal — Tabbed Charts ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+const chartsRendered = { memory: false, shape: false, combined: false };
+const CHART_COLORS = {
+    memory: { line:"rgba(255,95,203,.9)",  fill:"rgba(255,95,203,.12)",  bar:"rgba(255,73,113,.6)",  barBorder:"rgba(255,73,113,.9)"  },
+    shape:  { line:"rgba(100,200,255,.9)", fill:"rgba(100,200,255,.12)", bar:"rgba(74,222,128,.55)", barBorder:"rgba(74,222,128,.9)"  },
+};
+const chartScaleDefaults = {
+    x: { ticks:{ color:"#cdb7e6", maxTicksLimit:6, font:{size:10} }, grid:{ color:"#2a1440" } },
+    y: { ticks:{ color:"#cdb7e6", font:{size:10} },                  grid:{ color:"#2a1440" } }
+};
+
 if (showStatsBtn) {
     showStatsBtn.addEventListener("click", () => {
         const modal = document.getElementById("stats-modal");
         if (!modal) return;
+        const wasHidden = modal.classList.contains("hidden");
         modal.classList.toggle("hidden");
-        if (!modal.classList.contains("hidden") && !chartsLoaded) loadCharts();
+        if (wasHidden) {
+            const activeTab = document.querySelector(".stats-tab.active");
+            if (activeTab) loadTabCharts(activeTab.dataset.tab);
+        }
     });
 }
 
-const chartDefaults = {
-    responsive: true,
-    plugins: { legend:{ display:false } },
-    scales: {
-        x: { ticks:{color:"#cdb7e6", maxTicksLimit:6, font:{size:10}}, grid:{color:"#2a1440"} },
-        y: { ticks:{color:"#cdb7e6", font:{size:10}}, grid:{color:"#2a1440"} }
-    }
-};
+document.addEventListener("click", e => {
+    const tab = e.target.closest(".stats-tab");
+    if (!tab) return;
+    const tabId = tab.dataset.tab;
+    document.querySelectorAll(".stats-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(".stats-tab-panel").forEach(p => p.classList.add("hidden"));
+    document.getElementById(`tab-panel-${tabId}`)?.classList.remove("hidden");
+    loadTabCharts(tabId);
+});
 
-async function loadCharts() {
+async function loadTabCharts(tabId) {
+    if (chartsRendered[tabId]) return;
+    let allData = [];
     try {
-        const res  = await fetch(`php/stats.php?username=${encodeURIComponent(username)}`);
-        const data = await res.json();
-        if (!data || !data.length) {
-            document.getElementById("stats-empty").style.display = "block";
-            return;
-        }
-        chartsLoaded = true;
-        const labels = data.map(r => (r.created_at||"").slice(5,16));
+        const res = await fetch(`php/stats.php?username=${encodeURIComponent(username)}`);
+        allData = await res.json();
+        if (!Array.isArray(allData)) allData = [];
+    } catch(e) { return; }
+    if (tabId === "memory")        renderPuzzleCharts("memory",   allData.filter(r => r.puzzle_type === "memory"));
+    else if (tabId === "shape")    renderPuzzleCharts("shape",    allData.filter(r => r.puzzle_type === "shape"));
+    else if (tabId === "combined") renderCombinedCharts(allData);
+    chartsRendered[tabId] = true;
+}
 
-        new Chart(document.getElementById("chart-time").getContext("2d"), {
-            type:"line",
-            data:{ labels, datasets:[{
-                data: data.map(r => parseFloat(r.completion_time).toFixed(1)),
-                borderColor:"rgba(255,95,203,.9)", backgroundColor:"rgba(255,95,203,.12)",
-                fill:true, tension:0.35, pointRadius:3, borderWidth:2
-            }]},
-            options:{ ...chartDefaults }
-        });
+function renderPuzzleCharts(type, data) {
+    const pal = CHART_COLORS[type];
+    const emptyEl = document.getElementById(`stats-empty-${type}`);
+    if (!data || !data.length) { if (emptyEl) emptyEl.style.display = "block"; return; }
+    if (emptyEl) emptyEl.style.display = "none";
+    const labels = data.map((_, i) => i + 1);
+    new Chart(document.getElementById(`chart-${type}-time`).getContext("2d"), {
+        type:"line", data:{ labels, datasets:[{ data:data.map(r=>parseFloat(r.completion_time).toFixed(1)),
+            borderColor:pal.line, backgroundColor:pal.fill, fill:true, tension:0.35, pointRadius:3, borderWidth:2 }]},
+        options:{ responsive:true, plugins:{legend:{display:false}}, scales:chartScaleDefaults }
+    });
+    new Chart(document.getElementById(`chart-${type}-diff`).getContext("2d"), {
+        type:"line", data:{ labels, datasets:[{ data:data.map(r=>parseInt(r.difficulty)),
+            borderColor:pal.line, backgroundColor:pal.fill, fill:true, tension:0.35, pointRadius:3, borderWidth:2 }]},
+        options:{ responsive:true, plugins:{legend:{display:false}}, scales:{
+            x:chartScaleDefaults.x,
+            y:{min:0,max:10,ticks:{color:"#cdb7e6",stepSize:1,font:{size:10}},grid:{color:"#2a1440"}}
+        }}
+    });
+    new Chart(document.getElementById(`chart-${type}-mistakes`).getContext("2d"), {
+        type:"bar", data:{ labels, datasets:[{ data:data.map(r=>parseInt(r.mistakes)),
+            backgroundColor:pal.bar, borderColor:pal.barBorder, borderWidth:1, borderRadius:4 }]},
+        options:{ responsive:true, plugins:{legend:{display:false}}, scales:chartScaleDefaults }
+    });
+    const outcomes = data.reduce((acc,r)=>{ acc[r.outcome]=(acc[r.outcome]||0)+1; return acc; },{});
+    new Chart(document.getElementById(`chart-${type}-outcomes`).getContext("2d"), {
+        type:"doughnut", data:{ labels:Object.keys(outcomes), datasets:[{
+            data:Object.values(outcomes),
+            backgroundColor:["rgba(255,95,203,.7)","rgba(201,44,255,.7)","rgba(255,73,113,.7)","rgba(100,200,255,.7)"],
+            borderColor:"rgba(19,7,28,.8)", borderWidth:2
+        }]},
+        options:{ responsive:true, plugins:{legend:{position:"bottom",labels:{color:"#cdb7e6",font:{size:11},padding:10}}} }
+    });
+}
 
-        new Chart(document.getElementById("chart-diff").getContext("2d"), {
-            type:"line",
-            data:{ labels, datasets:[{
-                data: data.map(r => r.difficulty),
-                borderColor:"rgba(201,44,255,.9)", backgroundColor:"rgba(201,44,255,.12)",
-                fill:true, tension:0.35, pointRadius:3, borderWidth:2
-            }]},
-            options:{ ...chartDefaults, scales:{
-                x:{ ticks:{color:"#cdb7e6",maxTicksLimit:6,font:{size:10}}, grid:{color:"#2a1440"} },
-                y:{ min:0, max:10, ticks:{color:"#c92cff",stepSize:1,font:{size:10}}, grid:{color:"#2a1440"} }
-            }}
-        });
-
-        new Chart(document.getElementById("chart-mistakes").getContext("2d"), {
-            type:"bar",
-            data:{ labels, datasets:[{
-                data: data.map(r => r.mistakes),
-                backgroundColor:"rgba(255,73,113,.6)", borderColor:"rgba(255,73,113,.9)",
-                borderWidth:1, borderRadius:4
-            }]},
-            options:{ ...chartDefaults }
-        });
-
-        const outcomes = data.reduce((acc, r) => { acc[r.outcome] = (acc[r.outcome]||0)+1; return acc; }, {});
-        new Chart(document.getElementById("chart-outcomes").getContext("2d"), {
-            type:"doughnut",
-            data:{
-                labels: Object.keys(outcomes),
-                datasets:[{
-                    data: Object.values(outcomes),
-                    backgroundColor:["rgba(255,95,203,.7)","rgba(201,44,255,.7)","rgba(255,73,113,.7)","rgba(100,200,255,.7)"],
-                    borderColor:"rgba(19,7,28,.8)", borderWidth:2
-                }]
-            },
-            options:{
-                responsive:true,
-                plugins:{ legend:{ position:"bottom", labels:{ color:"#cdb7e6", font:{size:11}, padding:10 } } }
-            }
-        });
-
-    } catch(e) { console.log("Charts load failed:", e); }
+function renderCombinedCharts(allData) {
+    const emptyEl = document.getElementById("stats-empty-combined");
+    if (!allData || !allData.length) { if (emptyEl) emptyEl.style.display = "block"; return; }
+    if (emptyEl) emptyEl.style.display = "none";
+    const memRows   = allData.filter(r => r.puzzle_type === "memory");
+    const shapeRows = allData.filter(r => r.puzzle_type === "shape");
+    const maxLen    = Math.max(memRows.length, shapeRows.length, 1);
+    const labels    = Array.from({ length: maxLen }, (_, i) => i + 1);
+    function pad(arr, key, parse = parseFloat) {
+        const vals = arr.map(r => parse(r[key]));
+        while (vals.length < maxLen) vals.push(null);
+        return vals;
+    }
+    const legendOpts = { display:true, position:"top", labels:{ color:"#cdb7e6", font:{size:11}, padding:12 } };
+    new Chart(document.getElementById("chart-combined-time").getContext("2d"), {
+        type:"line", data:{ labels, datasets:[
+            { label:"🌙 Memory", data:pad(memRows,"completion_time"), borderColor:"rgba(255,95,203,.9)", fill:false, tension:0.35, pointRadius:3, borderWidth:2, spanGaps:true },
+            { label:"🔷 Shape",  data:pad(shapeRows,"completion_time"), borderColor:"rgba(100,200,255,.9)", fill:false, tension:0.35, pointRadius:3, borderWidth:2, spanGaps:true }
+        ]}, options:{ responsive:true, plugins:{legend:legendOpts}, scales:chartScaleDefaults }
+    });
+    new Chart(document.getElementById("chart-combined-diff").getContext("2d"), {
+        type:"line", data:{ labels, datasets:[
+            { label:"🌙 Memory", data:pad(memRows,"difficulty",parseInt), borderColor:"rgba(255,95,203,.9)", fill:false, tension:0.35, pointRadius:3, borderWidth:2, spanGaps:true },
+            { label:"🔷 Shape",  data:pad(shapeRows,"difficulty",parseInt), borderColor:"rgba(100,200,255,.9)", fill:false, tension:0.35, pointRadius:3, borderWidth:2, spanGaps:true }
+        ]}, options:{ responsive:true, plugins:{legend:legendOpts}, scales:{
+            x:chartScaleDefaults.x,
+            y:{min:0,max:10,ticks:{color:"#cdb7e6",stepSize:1,font:{size:10}},grid:{color:"#2a1440"}}
+        }}
+    });
+    new Chart(document.getElementById("chart-combined-mistakes").getContext("2d"), {
+        type:"bar", data:{ labels, datasets:[
+            { label:"🌙 Memory", data:pad(memRows,"mistakes",parseInt), backgroundColor:"rgba(255,95,203,.6)", borderColor:"rgba(255,95,203,.9)", borderWidth:1, borderRadius:3 },
+            { label:"🔷 Shape",  data:pad(shapeRows,"mistakes",parseInt), backgroundColor:"rgba(100,200,255,.55)", borderColor:"rgba(100,200,255,.9)", borderWidth:1, borderRadius:3 }
+        ]}, options:{ responsive:true, plugins:{legend:legendOpts}, scales:chartScaleDefaults }
+    });
+    const outcomes = allData.reduce((acc,r)=>{ acc[r.outcome]=(acc[r.outcome]||0)+1; return acc; },{});
+    new Chart(document.getElementById("chart-combined-outcomes").getContext("2d"), {
+        type:"doughnut", data:{ labels:Object.keys(outcomes), datasets:[{
+            data:Object.values(outcomes),
+            backgroundColor:["rgba(255,95,203,.7)","rgba(201,44,255,.7)","rgba(255,73,113,.7)","rgba(100,200,255,.7)"],
+            borderColor:"rgba(19,7,28,.8)", borderWidth:2
+        }]},
+        options:{ responsive:true, plugins:{legend:{position:"bottom",labels:{color:"#cdb7e6",font:{size:11},padding:10}}} }
+    });
 }
 
 // ─── Multiplayer ───────────────────────────────────────────────────────────

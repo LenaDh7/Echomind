@@ -43,7 +43,6 @@ body.auth-page{ display:flex; align-items:center; justify-content:center; min-he
 /* ── App shell ──────────────────────────────── */
 .wrap{ position:fixed; inset:0; max-width:1100px; margin:0 auto; padding:0 12px; display:flex; align-items:stretch; justify-content:center; overflow:hidden; }
 
-/* shared */
 button{
   background:linear-gradient(180deg,var(--magenta),var(--magenta-d));
   color:#22091f; border:none; padding:10px 18px; margin:4px;
@@ -125,14 +124,72 @@ table{ width:100%; border-collapse:collapse; }
 th,td{ text-align:left; padding:5px 8px; border-bottom:1px solid #3a2450; color:var(--text); font-size:.82rem; }
 th{ color:var(--muted); font-weight:600; }
 
-/* Stats modal */
-#stats-modal{ position:fixed; inset:0; background:rgba(6,0,15,.85); backdrop-filter:blur(8px); z-index:150; display:flex; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto; }
+/* ── Stats modal ────────────────────────────── */
+/* The outer wrapper just centres the box and dims the background.
+   It does NOT scroll — the inner box does. */
+#stats-modal{
+  position:fixed; inset:0;
+  background:rgba(6,0,15,.85); backdrop-filter:blur(8px);
+  z-index:150;
+  display:flex; align-items:center; justify-content:center;
+  padding:16px;
+}
 #stats-modal.hidden{ display:none; }
-.stats-modal-box{ background:rgba(20,6,34,.97); border:1px solid rgba(255,95,203,.2); border-radius:20px; box-shadow:0 0 56px rgba(201,44,255,.3); width:100%; max-width:860px; padding:22px 24px; margin:auto; max-height:88vh; display:flex; flex-direction:column; }
-.charts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; overflow-y:auto; overflow-x:hidden; flex:1; min-height:0; scrollbar-width:thin; scrollbar-color:var(--magenta-d) transparent; padding-right:4px; }
-.charts-grid::-webkit-scrollbar{ width:4px; height:0; }
-.charts-grid::-webkit-scrollbar-thumb{ background:var(--magenta-d); border-radius:4px; }
-.chart-card{ background:rgba(255,255,255,.03); border:1px solid rgba(255,95,203,.1); border-radius:14px; padding:12px 14px; }
+
+/* The floating box — this is the single scrollable container */
+.stats-modal-box{
+  background:rgba(20,6,34,.97);
+  border:1px solid rgba(255,95,203,.2);
+  border-radius:20px;
+  box-shadow:0 0 56px rgba(201,44,255,.3);
+  width:100%; max-width:860px;
+  padding:22px 24px;
+  max-height:88vh;
+  overflow-y:auto;           /* ONE scroll on the whole box */
+  scrollbar-width:thin;
+  scrollbar-color:var(--magenta-d) transparent;
+}
+.stats-modal-box::-webkit-scrollbar{ width:5px; }
+.stats-modal-box::-webkit-scrollbar-thumb{ background:var(--magenta-d); border-radius:5px; }
+.stats-modal-box:hover::-webkit-scrollbar-thumb{ background:var(--magenta); }
+
+/* Tab bar */
+.stats-tabs{
+  display:flex; gap:6px;
+  margin-bottom:14px;
+  border-bottom:1px solid rgba(255,95,203,.15);
+  padding-bottom:10px;
+  flex-wrap:wrap;
+}
+.stats-tab{
+  background:transparent; color:var(--muted);
+  border:1px solid rgba(255,95,203,.2); border-radius:10px;
+  padding:7px 14px; font-size:.82rem; font-weight:600;
+  cursor:pointer; box-shadow:none; margin:0;
+  transition:all .2s ease;
+}
+.stats-tab:hover{ border-color:rgba(255,95,203,.5); color:var(--text); transform:none; filter:none; }
+.stats-tab.active{
+  background:linear-gradient(180deg,var(--magenta),var(--magenta-d));
+  color:#22091f; border-color:transparent;
+  box-shadow:0 4px 14px rgba(201,44,255,.3);
+}
+
+/* Tab panels */
+.stats-tab-panel.hidden{ display:none; }
+
+/* Chart grid — NO overflow/scroll of its own, just a plain grid */
+.charts-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.chart-card{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,95,203,.1);
+  border-radius:14px;
+  padding:12px 14px;
+}
 .chart-title{ font-size:.8rem; font-weight:600; color:var(--muted); margin-bottom:8px; text-align:center; }
 @media(max-width:600px){ .charts-grid{ grid-template-columns:1fr; } }
 
@@ -194,115 +251,75 @@ th{ color:var(--muted); font-weight:600; }
    SHAPE MEMORY
    ═══════════════════════════════════════════════════════════════ */
 
-.shape-grid {
-  display: grid;
-  gap: 10px;
-  justify-content: center;
-  padding: 4px;
+.shape-grid{
+  display:grid; gap:10px; justify-content:center; padding:4px;
 }
-
-.shape-card {
-  width: var(--shape-tile);
-  height: var(--shape-tile);
-  perspective: 600px;
-  cursor: pointer;
+.shape-card{
+  width:var(--shape-tile); height:var(--shape-tile);
+  perspective:600px; cursor:pointer;
 }
-
-/* Default: transitions enabled for gameplay flips */
-.shape-card .shape-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px;
+.shape-card .shape-card-inner{
+  position:relative; width:100%; height:100%;
+  transform-style:preserve-3d;
+  transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);
+  border-radius:12px;
 }
-
-/* Preview phase — face-up instantly, no animation */
-.shape-card.previewing .shape-card-inner {
-  transform: rotateY(180deg);
-  transition: none;
+.shape-card.previewing .shape-card-inner{
+  transform:rotateY(180deg);
+  transition:none;
 }
-
-/* Flip to face-up during gameplay */
 .shape-card.revealed .shape-card-inner,
-.shape-card.shape-matched .shape-card-inner {
-  transform: rotateY(180deg);
+.shape-card.shape-matched .shape-card-inner{
+  transform:rotateY(180deg);
 }
-
 .shape-card-front,
-.shape-card-back {
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.shape-card-back{
+  position:absolute; inset:0; border-radius:12px;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  display:flex; align-items:center; justify-content:center;
 }
-
-/* Front starts rotated 180° so it's hidden by default */
-.shape-card-front {
-  background: radial-gradient(135% 135% at 20% 10%, #1d0a27 0%, #0f0718 70%);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.06);
-  transform: rotateY(180deg);
-  padding: 12%;
+.shape-card-front{
+  background:radial-gradient(135% 135% at 20% 10%,#1d0a27 0%,#0f0718 70%);
+  box-shadow:0 6px 20px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.06);
+  transform:rotateY(180deg);
+  padding:12%;
 }
-
-.shape-card-front svg {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.15));
+.shape-card-front svg{
+  width:100%; height:100%;
+  filter:drop-shadow(0 0 6px rgba(255,255,255,.15));
 }
-
-/* Back is default visible face */
-.shape-card-back {
-  background: radial-gradient(120% 120% at 20% 10%, #1d0a27 0%, var(--tile-off) 70%);
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.35);
-  border: 1px solid rgba(255, 95, 203, 0.12);
+.shape-card-back{
+  background:radial-gradient(120% 120% at 20% 10%,#1d0a27 0%,var(--tile-off) 70%);
+  box-shadow:inset 0 -2px 0 rgba(255,255,255,.04),0 10px 24px rgba(0,0,0,.35);
+  border:1px solid rgba(255,95,203,.12);
 }
-
-.card-back-rune {
-  font-size: calc(var(--shape-tile) * 0.38);
-  color: rgba(255, 95, 203, 0.28);
-  user-select: none;
-  line-height: 1;
+.card-back-rune{
+  font-size:calc(var(--shape-tile) * 0.38);
+  color:rgba(255,95,203,.28); user-select:none; line-height:1;
 }
-
-/* Hover glow on unflipped cards */
-.shape-card:not(.shape-matched):not(.revealed):not(.previewing):hover .shape-card-back {
-  box-shadow: 0 0 16px rgba(255, 95, 203, 0.25), inset 0 -2px 0 rgba(255,255,255,.04);
-  border-color: rgba(255, 95, 203, 0.35);
+.shape-card:not(.shape-matched):not(.revealed):not(.previewing):hover .shape-card-back{
+  box-shadow:0 0 16px rgba(255,95,203,.25),inset 0 -2px 0 rgba(255,255,255,.04);
+  border-color:rgba(255,95,203,.35);
 }
-
-/* Matched — green glow */
-.shape-card.shape-matched .shape-card-front {
-  background: radial-gradient(135% 135% at 20% 10%, #0d2b1a 0%, #071a10 70%);
-  box-shadow: 0 0 18px rgba(74, 222, 128, 0.35), inset 0 0 0 1.5px rgba(74, 222, 128, 0.4);
-  animation: matchPulse 0.55s ease forwards;
+.shape-card.shape-matched .shape-card-front{
+  background:radial-gradient(135% 135% at 20% 10%,#0d2b1a 0%,#071a10 70%);
+  box-shadow:0 0 18px rgba(74,222,128,.35),inset 0 0 0 1.5px rgba(74,222,128,.4);
+  animation:matchPulse 0.55s ease forwards;
 }
-
-@keyframes matchPulse {
-  0%   { box-shadow: 0 0 0 rgba(74,222,128,0); }
-  40%  { box-shadow: 0 0 28px rgba(74,222,128,0.6); transform: rotateY(180deg) scale(1.06); }
-  100% { box-shadow: 0 0 18px rgba(74,222,128,0.3); transform: rotateY(180deg) scale(1); }
+@keyframes matchPulse{
+  0%  { box-shadow:0 0 0 rgba(74,222,128,0); }
+  40% { box-shadow:0 0 28px rgba(74,222,128,.6); transform:rotateY(180deg) scale(1.06); }
+  100%{ box-shadow:0 0 18px rgba(74,222,128,.3); transform:rotateY(180deg) scale(1); }
 }
-
-/* Wrong pair — shake */
-.shape-card.shape-wrong .shape-card-inner {
-  animation: wrongShake 0.45s ease;
+.shape-card.shape-wrong .shape-card-inner{ animation:wrongShake 0.45s ease; }
+.shape-card.shape-wrong .shape-card-front{
+  box-shadow:0 0 22px rgba(255,73,113,.7),inset 0 0 0 1.5px rgba(255,73,113,.5);
 }
-
-.shape-card.shape-wrong .shape-card-front {
-  box-shadow: 0 0 22px rgba(255, 73, 113, 0.7), inset 0 0 0 1.5px rgba(255, 73, 113, 0.5);
-}
-
-@keyframes wrongShake {
-  0%   { transform: rotateY(180deg) translateX(0); }
-  20%  { transform: rotateY(180deg) translateX(-5px); }
-  40%  { transform: rotateY(180deg) translateX(5px); }
-  60%  { transform: rotateY(180deg) translateX(-3px); }
-  80%  { transform: rotateY(180deg) translateX(3px); }
-  100% { transform: rotateY(180deg) translateX(0); }
+@keyframes wrongShake{
+  0%  { transform:rotateY(180deg) translateX(0); }
+  20% { transform:rotateY(180deg) translateX(-5px); }
+  40% { transform:rotateY(180deg) translateX(5px); }
+  60% { transform:rotateY(180deg) translateX(-3px); }
+  80% { transform:rotateY(180deg) translateX(3px); }
+  100%{ transform:rotateY(180deg) translateX(0); }
 }

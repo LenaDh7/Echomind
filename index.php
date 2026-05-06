@@ -22,7 +22,7 @@ $classroom_code = $_SESSION['classroom_code'] ?? null;
 <div class="wrap">
 
   <!-- ══════════════════════════════════════
-       PUZZLE SELECT SCREEN
+      PUZZLE SELECT SCREEN
   ══════════════════════════════════════ -->
   <section id="prestart">
     <canvas id="particles" class="particles"></canvas>
@@ -199,31 +199,62 @@ $classroom_code = $_SESSION['classroom_code'] ?? null;
 <?php endif; ?>
 
 <!-- Stats modal -->
+<!-- Stats modal — replace the entire <div id="stats-modal" ...> block in index.php with this -->
+
 <div id="stats-modal" class="hidden">
   <div class="stats-modal-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <h3 style="color:var(--magenta);margin:0;">📊 Player Statistics</h3>
       <button id="stats-modal-close" class="ghost small">✕ Close</button>
     </div>
-    <p id="stats-empty" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">No data yet — play some puzzles first!</p>
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-title">⏱ Completion Time</div>
-        <canvas id="chart-time"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">⬆ Difficulty Progress</div>
-        <canvas id="chart-diff"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">❌ Mistakes per Game</div>
-        <canvas id="chart-mistakes"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">🏆 Outcomes</div>
-        <canvas id="chart-outcomes"></canvas>
+
+    <!-- Tab bar -->
+    <div class="stats-tabs">
+      <button class="stats-tab active" data-tab="memory">🌙 Witchlight Memory</button>
+      <button class="stats-tab"        data-tab="shape">🔷 Shape Memory</button>
+      <button class="stats-tab"        data-tab="combined">✦ Combined</button>
+    </div>
+
+    <!-- Witchlight Memory tab -->
+    <div id="tab-panel-memory" class="stats-tab-panel">
+      <p id="stats-empty-memory" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">
+        No Witchlight Memory data yet — play some puzzles first!
+      </p>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">⏱ Completion Time</div><canvas id="chart-memory-time"></canvas></div>
+        <div class="chart-card"><div class="chart-title">⬆ Difficulty Progress</div><canvas id="chart-memory-diff"></canvas></div>
+        <div class="chart-card"><div class="chart-title">❌ Mistakes per Game</div><canvas id="chart-memory-mistakes"></canvas></div>
+        <div class="chart-card"><div class="chart-title">🏆 Outcomes</div><canvas id="chart-memory-outcomes"></canvas></div>
       </div>
     </div>
+
+    <!-- Shape Memory tab -->
+    <div id="tab-panel-shape" class="stats-tab-panel hidden">
+      <p id="stats-empty-shape" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">
+        No Shape Memory data yet — try the puzzle first!
+      </p>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">⏱ Completion Time</div><canvas id="chart-shape-time"></canvas></div>
+        <div class="chart-card"><div class="chart-title">⬆ Difficulty Progress</div><canvas id="chart-shape-diff"></canvas></div>
+        <div class="chart-card"><div class="chart-title">❌ Mistakes per Game</div><canvas id="chart-shape-mistakes"></canvas></div>
+        <div class="chart-card"><div class="chart-title">🏆 Outcomes</div><canvas id="chart-shape-outcomes"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Combined tab -->
+    <div id="tab-panel-combined" class="stats-tab-panel hidden">
+      <p id="stats-empty-combined" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">
+        No data yet — play some puzzles first!
+      </p>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">⏱ Completion Time — Both Puzzles</div><canvas id="chart-combined-time"></canvas></div>
+        <div class="chart-card"><div class="chart-title">⬆ Difficulty Progress — Both Puzzles</div><canvas id="chart-combined-diff"></canvas></div>
+        <div class="chart-card"><div class="chart-title">❌ Mistakes — Both Puzzles</div><canvas id="chart-combined-mistakes"></canvas></div>
+        <div class="chart-card"><div class="chart-title">🏆 All Outcomes Combined</div><canvas id="chart-combined-outcomes"></canvas></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
