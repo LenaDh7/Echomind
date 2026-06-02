@@ -24,24 +24,29 @@ if ($res->num_rows == 0) {
 $classroom = $res->fetch_assoc();
 $code      = $classroom['classroom_code'];
 
-// Get students
-$sts  = $conn->prepare("SELECT student_name, created_at FROM students WHERE classroom_code = ? ORDER BY student_name ASC");
+// Get students WITH their assignments
+$sts = $conn->prepare("
+    SELECT student_name, assigned_puzzle, assigned_difficulty, created_at
+    FROM students
+    WHERE classroom_code = ?
+    ORDER BY student_name ASC
+");
 $sts->bind_param("s", $code);
 $sts->execute();
-$sres    = $sts->get_result();
+$sres     = $sts->get_result();
 $students = [];
 while ($row = $sres->fetch_assoc()) {
     $students[] = $row;
 }
 
-// Get recent scores per student
+// Get recent scores per student (include puzzle_type)
 $scores_map = [];
 $sc = $conn->prepare("
-    SELECT username, difficulty, completion_time, mistakes, outcome, created_at
+    SELECT username, puzzle_type, difficulty, completion_time, mistakes, outcome, created_at
     FROM scores
     WHERE classroom_code = ?
     ORDER BY created_at DESC
-    LIMIT 200
+    LIMIT 300
 ");
 $sc->bind_param("s", $code);
 $sc->execute();
@@ -50,7 +55,7 @@ while ($row = $scres->fetch_assoc()) {
     if (!isset($scores_map[$row['username']])) {
         $scores_map[$row['username']] = [];
     }
-    if (count($scores_map[$row['username']]) < 5) {
+    if (count($scores_map[$row['username']]) < 10) {
         $scores_map[$row['username']][] = $row;
     }
 }

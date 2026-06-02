@@ -1,14 +1,11 @@
 <?php
-$conn = new mysqli('127.0.0.1', 'root', '', 'echomind_db', 3306);
-if ($conn->connect_error) {
-    die(json_encode(["error" => "Connection failed"]));
-}
+require_once "db_connect.php";
 header('Content-Type: application/json');
 
 $user = $_GET['username'] ?? '';
 if (empty($user)) { echo json_encode([]); exit; }
 
-$stmt = $conn->prepare("SELECT difficulty, completion_time, mistakes, outcome, created_at FROM scores WHERE username = ? ORDER BY created_at ASC");
+$stmt = $conn->prepare("SELECT puzzle_type, difficulty, completion_time, mistakes, outcome, created_at FROM scores WHERE username = ? ORDER BY created_at ASC");
 $stmt->bind_param("s", $user);
 $stmt->execute();
 $result = $stmt->get_result();
