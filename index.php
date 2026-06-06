@@ -48,11 +48,10 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
           <div class="card-desc">Memorise the cards, then find every matching pair.</div>
         </div>
 
-        <div class="puzzle-card locked" data-puzzle="veil">
-          <div class="card-icon">✨</div>
-          <div class="card-title">Veil Pattern</div>
-          <div class="card-desc">Coming soon — visual pattern matching.</div>
-          <div class="card-lock">🔒 Coming Soon</div>
+        <div class="puzzle-card" data-puzzle="story">
+          <div class="card-icon">📖</div>
+          <div class="card-title">Story Recall</div>
+          <div class="card-desc">Listen to a story, then order pictures or answer a question.</div>
         </div>
 
       </div>
@@ -205,6 +204,7 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="stats-tab-btn ghost small active" data-tab="memory">🌙 Witchlight Memory</button>
       <button class="stats-tab-btn ghost small" data-tab="shape">🔷 Shape Memory</button>
+      <button class="stats-tab-btn ghost small" data-tab="story">📖 Story Recall</button>
       <button class="stats-tab-btn ghost small" data-tab="combined">⭐ Combined</button>
     </div>
     <p id="stats-empty" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">No data yet — play some puzzles first!</p>
@@ -249,6 +249,8 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
   const PHP_ASSIGNED_PUZZLE   = <?php echo json_encode($assigned_puzzle); ?>;
   const PHP_ASSIGNED_DIFF     = <?php echo json_encode($assigned_difficulty !== null ? (int)$assigned_difficulty : null); ?>;
 </script>
+<script src="story_data.js"></script>
+<script src="story_puzzle.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

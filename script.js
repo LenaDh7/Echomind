@@ -68,6 +68,7 @@ let gameStarted = false;
 
 const SKEY   = "echomind_local_progress_v1";
 const LBOARD = "echomind_local_leaderboard_v1";
+console.log("[EchoMind] script.js v3 loaded — story+shapeFix");
 
 // ─── Shape Memory state ────────────────────────────────────────────────────
 let shapeCards   = [];
@@ -85,7 +86,7 @@ const SHAPES = [
     { name:"star",      color:"#fb923c", draw:s=>`<polygon points="50,8 61,35 90,35 67,54 76,82 50,64 24,82 33,54 10,35 39,35" fill="${s.color}"/>` },
     { name:"hexagon",   color:"#c084fc", draw:s=>`<polygon points="50,10 86,30 86,70 50,90 14,70 14,30" fill="${s.color}"/>` },
     { name:"pentagon",  color:"#a3e635", draw:s=>`<polygon points="50,10 90,38 74,84 26,84 10,38" fill="${s.color}"/>` },
-    { name:"crescent",  color:"#f9a8d4", draw:s=>`<path d="M50,15 A35,35 0 1,0 50,85 A22,22 0 1,1 50,15Z" fill="${s.color}"/>` },
+    { name:"crescent",  color:"#f9a8d4", draw:s=>`<defs><clipPath id="cp_c"><circle cx="50" cy="50" r="36"/></clipPath></defs><circle cx="50" cy="50" r="36" fill="${s.color}"/><circle cx="66" cy="40" r="28" fill="#0f0718" clip-path="url(#cp_c)"/>` },
     { name:"cross",     color:"#f87171", draw:s=>`<path d="M38,10 h24 v28 h28 v24 h-28 v28 h-24 v-28 h-28 v-24 h28 z" fill="${s.color}"/>` },
     { name:"heart",     color:"#fb7185", draw:s=>`<path d="M50,80 C50,80 10,52 10,28 A20,20 0 0,1 50,22 A20,20 0 0,1 90,28 C90,52 50,80 50,80Z" fill="${s.color}"/>` },
     { name:"arrow",     color:"#2dd4bf", draw:s=>`<polygon points="50,10 90,50 68,50 68,90 32,90 32,50 10,50" fill="${s.color}"/>` },
@@ -93,8 +94,8 @@ const SHAPES = [
     { name:"droplet",   color:"#38bdf8", draw:s=>`<path d="M50,10 Q80,45 80,62 A30,30 0 0,1 20,62 Q20,45 50,10Z" fill="${s.color}"/>` },
     { name:"shield",    color:"#818cf8", draw:s=>`<path d="M50,10 L88,28 L88,58 Q88,80 50,92 Q12,80 12,58 L12,28 Z" fill="${s.color}"/>` },
     { name:"flower",    color:"#f59e0b", draw:s=>`<circle cx="50" cy="30" r="16" fill="${s.color}"/><circle cx="50" cy="70" r="16" fill="${s.color}"/><circle cx="30" cy="50" r="16" fill="${s.color}"/><circle cx="70" cy="50" r="16" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="${s.color}" opacity="0.7"/>` },
-    { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#1a0030"/><circle cx="44" cy="44" r="5" fill="rgba(255,255,255,0.9)"/>` },
-    { name:"spiral",    color:"#f97316", draw:s=>`<path d="M50,50 m-2,0 a2,2 0 0,1 4,0 a6,6 0 0,1 -12,0 a12,12 0 0,1 24,0 a18,18 0 0,1 -36,0 a24,24 0 0,1 48,0" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="3" fill="${s.color}"/>` },
+    { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#ffffff"/><circle cx="50" cy="50" r="9" fill="#1a0a2e"/><circle cx="44" cy="44" r="4" fill="#ffffff"/>` },
+    { name:"spiral",    color:"#f97316", draw:s=>`<circle cx="50" cy="50" r="36" fill="${s.color}"/><circle cx="50" cy="50" r="28" fill="#0f0718"/><circle cx="50" cy="50" r="20" fill="${s.color}"/><circle cx="50" cy="50" r="12" fill="#0f0718"/><circle cx="50" cy="50" r="5" fill="${s.color}"/>` },
     { name:"clover",    color:"#34d399", draw:s=>`<circle cx="50" cy="32" r="18" fill="${s.color}"/><circle cx="68" cy="62" r="18" fill="${s.color}"/><circle cx="32" cy="62" r="18" fill="${s.color}"/><rect x="46" y="46" width="8" height="36" rx="4" fill="${s.color}"/>` },
 ];
 
@@ -108,7 +109,7 @@ function getShapePreviewMs(diff) {
 // ─── Utilities ─────────────────────────────────────────────────────────────
 function fmt(v) { return (v?.toFixed ? v.toFixed(2) : v); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function puzzleLabel(pt) { return pt === "shape" ? "🔷 Shape" : "🌙 Memory"; }
+function puzzleLabel(pt) { if (pt === "shape") return "🔷 Shape"; if (pt === "story") return "📖 Story"; return "🌙 Memory"; }
 
 function heuristicNext(d, t, m) {
     let dlt = 0;
@@ -263,7 +264,7 @@ async function loadCharts() {
         const res    = await fetch(`php/stats.php?username=${encodeURIComponent(username)}`);
         allStatsData = await res.json();
         chartsLoaded = true;
-        activeStatTab = selectedPuzzle || "memory";
+        activeStatTab = (["memory","shape","story","combined"].includes(selectedPuzzle) ? selectedPuzzle : null) || "memory";
         document.querySelectorAll(".stats-tab-btn").forEach(b => {
             b.classList.toggle("active", b.dataset.tab === activeStatTab);
         });
@@ -313,7 +314,8 @@ window.addEventListener("load", () => {
             prestartSection.classList.add("hidden");
             gameSection.classList.remove("hidden");
             if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-            if (selectedPuzzle === "shape") startShapePuzzle();
+            if (selectedPuzzle === "shape")       startShapePuzzle();
+            else if (selectedPuzzle === "story")  window.startStoryPuzzle();
             else startNewPuzzle();
         }, 1500);
 
@@ -356,6 +358,7 @@ document.querySelectorAll(".puzzle-card:not(.locked)").forEach(card => {
         document.querySelectorAll(".puzzle-card").forEach(c => c.classList.remove("selected"));
         card.classList.add("selected");
         selectedPuzzle = card.dataset.puzzle;
+        console.log("[EchoMind] puzzle selected:", selectedPuzzle);
         if (startLevelInput) updateSliderUI(startLevelInput.value);
     });
 });
@@ -371,6 +374,11 @@ function updateSliderUI(val) {
             else if (n <= 5) levelHint.textContent = "4×4 grid · 8 pairs · 30s preview";
             else if (n <= 7) levelHint.textContent = "6×4 grid · 12 pairs · 45s preview";
             else             levelHint.textContent = "6×6 grid · 18 pairs · 45s preview";
+        } else if (selectedPuzzle === "story") {
+            if (n <= 1)      levelHint.textContent = "Simple 2-picture stories · Beginner";
+            else if (n <= 3) levelHint.textContent = "3-picture sequences · Intermediate";
+            else if (n <= 6) levelHint.textContent = "Longer stories + questions · Advanced";
+            else             levelHint.textContent = "Complex narratives · Expert";
         } else {
             if (n < 3)      levelHint.textContent = "3×3 grid · Beginner";
             else if (n < 7) levelHint.textContent = "4×4 grid · Intermediate";
@@ -410,7 +418,8 @@ if (startBtn) {
         prestartSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-        if (selectedPuzzle === "shape") startShapePuzzle();
+        if      (selectedPuzzle === "shape")  startShapePuzzle();
+        else if (selectedPuzzle === "story") window.startStoryPuzzle();
         else startNewPuzzle();
     });
 }
@@ -421,11 +430,11 @@ if (aboutBtnGame) aboutBtnGame.addEventListener("click", () => aboutOverlay.clas
 if (aboutClose)   aboutClose.addEventListener("click",   () => aboutOverlay.classList.add("hidden"));
 
 function setMuted(m) {
-    muted = m;
+    muted = m; // controls ambient only — TTS voice is unaffected
     const lbl = muted ? "🔈" : "🔊";
     [muteBtnPre, muteBtnGame].forEach(b => { if (b) b.textContent = lbl; });
     if (muted) { if (ambient) { ambient.volume = 0; ambient.pause(); } }
-    else        { if (ambient) ambient.play(); }
+    else        { if (ambient) { ambient.volume = 0.35; ambient.play(); } }
 }
 [muteBtnPre, muteBtnGame].forEach(b => {
     if (b) b.addEventListener("click", () => setMuted(!muted));
@@ -442,6 +451,14 @@ if (logoutBtn) logoutBtn.addEventListener("click", () => { window.location.href 
 
 const backBtn = document.getElementById("back-btn");
 if (backBtn) backBtn.addEventListener("click", () => {
+    // Stop any ongoing story narration immediately
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    // Resume ambient if story paused it
+    if (window._storyPausedAmbient) {
+        const amb = document.getElementById("ambient");
+        if (amb) amb.play().catch(()=>{});
+        window._storyPausedAmbient = false;
+    }
     clearInterval(window.__t);
     clearInterval(window.__countdown);
     gameSection.classList.add("hidden");
@@ -457,6 +474,8 @@ if (backBtn) backBtn.addEventListener("click", () => {
 });
 
 if (giveupBtn) giveupBtn.addEventListener("click", () => {
+    // Stop any ongoing story narration immediately
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     clearInterval(window.__t);
     clearInterval(window.__countdown);
     const timeSec = startMs ? (Date.now() - startMs) / 1000 : 0;
@@ -465,7 +484,8 @@ if (giveupBtn) giveupBtn.addEventListener("click", () => {
     sendScoreToServer(entry);
     difficulty = heuristicNext(difficulty, timeSec, mistakes);
     saveState();
-    if (selectedPuzzle === "shape") startShapePuzzle();
+    if (selectedPuzzle === "shape")  startShapePuzzle();
+    else if (selectedPuzzle === "story") window.startStoryPuzzle();
     else startNewPuzzle();
 });
 
@@ -562,7 +582,8 @@ if (continueBtn) continueBtn.addEventListener("click", () => {
     overlay.classList.add("hidden");
     difficulty = heuristicNext(difficulty, parseFloat(resTime.textContent), parseInt(resMistakes.textContent));
     saveState();
-    if (selectedPuzzle === "shape") startShapePuzzle();
+    if (selectedPuzzle === "shape")  startShapePuzzle();
+    else if (selectedPuzzle === "story") window.startStoryPuzzle();
     else startNewPuzzle();
 });
 
@@ -571,6 +592,8 @@ if (retryBtn) retryBtn.addEventListener("click", () => {
     sendScoreToServer({ username, puzzle_type: selectedPuzzle, difficulty, completion_time: 0, mistakes, outcome: "retry" });
     if (selectedPuzzle === "shape") {
         startShapePuzzle();
+    } else if (selectedPuzzle === "story") {
+        window.startStoryPuzzle();
     } else {
         playerIndex = 0; startMs = 0;
         timerEl.textContent = "Time: 0.0s";
@@ -632,8 +655,14 @@ function startShapePuzzle() {
 
     diffEl.textContent = difficulty;
 
-    requestAnimationFrame(() => {
-        shapeCards.forEach(c => { c.el.classList.add("previewing"); c.faceUp = true; });
+    // Add .previewing synchronously — CSS opacity/z-index shows front, hides back.
+    // No rAF needed (and rAF caused a race: it could fire after the NEXT puzzle
+    // rebuild had already cleared shapeCards, leaving cards without the class).
+    shapeCards.forEach(c => {
+        c.inner.style.transition = "none";
+        c.inner.style.transform  = "";
+        c.el.classList.add("previewing");
+        c.faceUp = true;
     });
 
     const previewMs  = getShapePreviewMs(difficulty);
@@ -669,7 +698,12 @@ function startShapePuzzle() {
         indices.forEach((cardIdx, i) => {
             setTimeout(() => {
                 const c = shapeCards[cardIdx];
-                if (!c.matched) { c.el.classList.remove("previewing"); c.faceUp = false; }
+                if (!c.matched) {
+                    c.el.classList.remove("previewing");
+                    // Re-enable transition for the flip-back animation
+                    c.inner.style.transition = "";
+                    c.faceUp = false;
+                }
             }, i * staggerMs);
         });
         setTimeout(() => {
@@ -859,6 +893,7 @@ function renderDashboard(data) {
                 <select class="assign-puzzle-sel ghost small" data-name="${s.student_name}" data-code="${code}" style="flex:1;min-width:130px;background:#0f0718;color:var(--text);border:1px solid #3d2058;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:.8rem;">
                   <option value="memory" ${puzzle==="memory"?"selected":""}>🌙 Witchlight Memory</option>
                   <option value="shape"  ${puzzle==="shape" ?"selected":""}>🔷 Shape Memory</option>
+                  <option value="story"  ${puzzle==="story" ?"selected":""}>📖 Story Recall</option>
                 </select>
                 <select class="assign-diff-sel ghost small" data-name="${s.student_name}" data-code="${code}" style="width:80px;background:#0f0718;color:var(--text);border:1px solid #3d2058;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:.8rem;">
                   ${Array.from({length:11},(_,i)=>`<option value="${i}" ${diff==i?"selected":""}>${i===0?"Lvl 0":"Lvl "+i}</option>`).join("")}

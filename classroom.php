@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php foreach ($students as $s):
             $puzzle = $s['assigned_puzzle'] ?? 'memory';
             $diff   = $s['assigned_difficulty'] ?? 0;
-            $puzzleLabel = $puzzle === 'shape' ? '🔷 Shape Memory' : '🌙 Witchlight Memory';
+            $puzzleLabel = $puzzle === 'shape' ? '🔷 Shape Memory' : ($puzzle === 'story' ? '📖 Story Recall' : '🌙 Witchlight Memory');
             $diffLabel   = $diff > 0 ? "Level $diff" : "Level 0";
           ?>
             <div class="student-item" onclick="selectStudent(this, '<?php echo htmlspecialchars($s['student_name'], ENT_QUOTES); ?>')">

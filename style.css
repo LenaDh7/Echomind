@@ -357,3 +357,256 @@ a.pre-logout-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   STORY RECALL PUZZLE — appended below all existing rules
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Puzzle container override ─────────────────────────────────────────────── */
+#puzzle.story-puzzle {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            18px;
+  padding:        20px 14px;
+  max-width:      660px;
+  margin:         0 auto;
+  width:          100%;
+  overflow:       visible;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.story-header { text-align: center; width: 100%; }
+.story-mode-badge {
+  display:        inline-block;
+  background:     rgba(201,44,255,.18);
+  border:         1px solid rgba(201,44,255,.4);
+  color:          var(--magenta-d);
+  padding:        4px 16px;
+  border-radius:  50px;
+  font-size:      .82rem;
+  font-weight:    600;
+  letter-spacing: .04em;
+  margin-bottom:  8px;
+}
+.story-instruction { color: var(--muted); font-size: .88rem; margin: 0; }
+
+/* ── Narration card ─────────────────────────────────────────────────────────── */
+.story-narration {
+  background:    rgba(34,11,52,.65);
+  border:        1px solid rgba(201,44,255,.25);
+  border-radius: 18px;
+  padding:       20px 24px;
+  width:         100%;
+  box-sizing:    border-box;
+  text-align:    center;
+}
+.story-speaker {
+  font-size:    1.9rem;
+  margin-bottom: 10px;
+  display:       block;
+  user-select:   none;
+}
+.story-speaker.speaking { animation: speakerPulse .65s ease-in-out infinite alternate; }
+@keyframes speakerPulse {
+  from { filter: drop-shadow(0 0 0px rgba(201,44,255,0));  transform: scale(1); }
+  to   { filter: drop-shadow(0 0 8px rgba(201,44,255,.9)); transform: scale(1.15); }
+}
+.story-text {
+  font-size:   1rem;
+  line-height: 1.65;
+  color:       var(--text);
+  margin:      0 0 12px;
+}
+button.story-replay {
+  font-size: .8rem;
+  padding:   5px 14px;
+  opacity:   .7;
+}
+button.story-replay:hover { opacity: 1; }
+
+/* ── Task area ──────────────────────────────────────────────────────────────── */
+.story-task {
+  width:          100%;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            14px;
+}
+.story-task-prompt,
+.story-question-text {
+  font-size:   1rem;
+  font-weight: 600;
+  color:       var(--text);
+  text-align:  center;
+  margin:      0;
+}
+.story-question-text {
+  font-size:     1.05rem;
+  line-height:   1.5;
+  background:    rgba(201,44,255,.08);
+  border:        1px solid rgba(201,44,255,.2);
+  border-radius: 14px;
+  padding:       16px 20px;
+  width:         100%;
+  box-sizing:    border-box;
+}
+
+/* ── Picture order grid ─────────────────────────────────────────────────────── */
+.story-order-grid {
+  display:         flex;
+  flex-wrap:       wrap;
+  gap:             12px;
+  justify-content: center;
+  width:           100%;
+}
+.story-scene-card {
+  background:    rgba(44,11,72,.8);
+  border:        2px solid rgba(201,44,255,.3);
+  border-radius: 16px;
+  padding:       18px 14px 12px;
+  min-width:     120px;
+  max-width:     150px;
+  flex:          1 1 120px;
+  text-align:    center;
+  cursor:        grab;
+  transition:    transform .18s, border-color .18s, box-shadow .18s;
+  user-select:   none;
+  position:      relative;
+  box-shadow:    0 0 14px rgba(201,44,255,.08);
+}
+.story-scene-card:hover {
+  border-color: rgba(201,44,255,.65);
+  transform:    translateY(-2px);
+  box-shadow:   0 6px 22px rgba(201,44,255,.2);
+}
+.story-scene-card.dragging      { opacity: .45; cursor: grabbing; transform: scale(1.04); }
+.story-scene-card.drag-over     { border-color: #c92cff; background: rgba(201,44,255,.18); transform: scale(1.04); }
+.story-scene-card.scene-correct { border-color: #4ade80; background: rgba(74,222,128,.12); box-shadow: 0 0 18px rgba(74,222,128,.35); }
+.story-scene-card.scene-wrong   { border-color: #f87171; background: rgba(248,113,113,.12); }
+@keyframes sceneShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-6px); }
+  40%     { transform: translateX(6px); }
+  60%     { transform: translateX(-4px); }
+  80%     { transform: translateX(4px); }
+}
+.story-scene-card.scene-shake { animation: sceneShake .5s ease; }
+.scene-emoji  { font-size: 2.2rem; margin-bottom: 7px; line-height: 1; }
+.scene-label  { font-size: .75rem; color: var(--muted); line-height: 1.3; }
+.scene-drag-hint { position: absolute; top: 7px; right: 9px; font-size: .82rem; color: rgba(201,44,255,.4); }
+
+/* ── Check button ───────────────────────────────────────────────────────────── */
+.story-check-btn {
+  background:    rgba(201,44,255,.18);
+  border:        2px solid rgba(201,44,255,.5);
+  color:         var(--text);
+  padding:       12px 32px;
+  border-radius: 50px;
+  font-size:     .95rem;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    background .2s, transform .15s, box-shadow .2s;
+  font-family:   inherit;
+  box-shadow:    none;
+}
+.story-check-btn:hover {
+  background: rgba(201,44,255,.35);
+  transform:  translateY(-1px);
+  box-shadow: 0 4px 18px rgba(201,44,255,.3);
+}
+.story-check-btn:active { transform: scale(.97); }
+
+/* ── Multiple-choice answers ────────────────────────────────────────────────── */
+.story-choices { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.story-choice-btn {
+  background:    rgba(44,11,72,.65);
+  border:        2px solid rgba(201,44,255,.28);
+  color:         var(--text);
+  padding:       13px 22px;
+  border-radius: 14px;
+  font-size:     .95rem;
+  cursor:        pointer;
+  text-align:    left;
+  transition:    background .18s, border-color .18s, transform .15s;
+  font-family:   inherit;
+  box-shadow:    none;
+}
+.story-choice-btn:hover:not(:disabled) {
+  background:   rgba(201,44,255,.2);
+  border-color: rgba(201,44,255,.65);
+  transform:    translateX(4px);
+  box-shadow:   none;
+}
+.story-choice-btn:disabled { cursor: default; opacity: .7; }
+.story-choice-btn.choice-correct { border-color: #4ade80; background: rgba(74,222,128,.18); color: #4ade80; }
+.story-choice-btn.choice-wrong   { border-color: #f87171; background: rgba(248,113,113,.18); color: #f87171; }
+@keyframes choiceShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+.story-choice-btn.choice-shake { animation: choiceShake 0.5s ease; }
+
+/* ── Fade-in animation ──────────────────────────────────────────────────────── */
+.fade-in { animation: fadeInUp .4s ease forwards; }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .story-scene-card { min-width: 96px; max-width: 120px; padding: 14px 8px 10px; }
+  .scene-emoji      { font-size: 1.8rem; }
+  .story-narration  { padding: 14px; }
+  .story-check-btn  { padding: 10px 22px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHAPE MEMORY — Preview fix (MUST stay at absolute bottom of file)
+   Wins the specificity cascade over .shape-card-front { transform: rotateY(180deg) }
+   ═══════════════════════════════════════════════════════════════════════════ */
+.shape-card.previewing .shape-card-inner {
+  transform: rotateY(180deg) !important;
+  transition: none !important;
+}
+.shape-card.previewing .shape-card-front {
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SHAPE MEMORY — PREVIEW DISPLAY FIX (must stay at very bottom)
+   Bypasses 3D transform entirely during preview to avoid GPU compositing
+   issues where preserve-3d breaks inside stacked compositing layers.
+   During .previewing: front forced visible, back hidden — no 3D tricks.
+   ══════════════════════════════════════════════════════════════════════════ */
+.shape-card.previewing .shape-card-inner {
+  transform: none !important;
+  transition: none !important;
+}
+.shape-card.previewing .shape-card-front {
+  transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 2 !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+}
+.shape-card.previewing .shape-card-back {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  z-index: 1 !important;
+}
+
+/* ── Story narration fade-out (after voice finishes, before task reveals) ── */
+.story-narration-fadeout {
+  animation: storyFadeOut 0.6s ease forwards;
+}
+@keyframes storyFadeOut {
+  from { opacity: 1; transform: translateY(0);   max-height: 300px; }
+  to   { opacity: 0; transform: translateY(-8px); max-height: 0; padding: 0; margin: 0; overflow: hidden; }
+}
