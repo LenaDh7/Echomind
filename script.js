@@ -60,7 +60,22 @@ let flashing       = false;
 let muted          = false;
 let selectedPuzzle = "memory";
 
+let firstClickMs = 0;
 let roomCode    = null;
+const _sessionToken = typeof PHP_SESSION_TOKEN !== "undefined" ? PHP_SESSION_TOKEN : null;
+
+function _releaseStudentSession() {
+    if (role === "student" && classroomCode && _sessionToken && username) {
+        const fd = new FormData();
+        fd.append("action", "release");
+        fd.append("classroom_code", classroomCode);
+        fd.append("student_name", username);
+        fd.append("token", _sessionToken);
+        navigator.sendBeacon("php/student_session.php", fd);
+    }
+}
+// Release when tab closes / navigates away
+window.addEventListener("beforeunload", _releaseStudentSession);
 let isHost      = false;
 let syncTimer   = null;
 let playerReady = false;
@@ -68,7 +83,6 @@ let gameStarted = false;
 
 const SKEY   = "echomind_local_progress_v1";
 const LBOARD = "echomind_local_leaderboard_v1";
-console.log("[EchoMind] script.js v3 loaded — story+shapeFix");
 
 // ─── Shape Memory state ────────────────────────────────────────────────────
 let shapeCards   = [];
@@ -94,12 +108,13 @@ const SHAPES = [
     { name:"droplet",   color:"#38bdf8", draw:s=>`<path d="M50,10 Q80,45 80,62 A30,30 0 0,1 20,62 Q20,45 50,10Z" fill="${s.color}"/>` },
     { name:"shield",    color:"#818cf8", draw:s=>`<path d="M50,10 L88,28 L88,58 Q88,80 50,92 Q12,80 12,58 L12,28 Z" fill="${s.color}"/>` },
     { name:"flower",    color:"#f59e0b", draw:s=>`<circle cx="50" cy="30" r="16" fill="${s.color}"/><circle cx="50" cy="70" r="16" fill="${s.color}"/><circle cx="30" cy="50" r="16" fill="${s.color}"/><circle cx="70" cy="50" r="16" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="${s.color}" opacity="0.7"/>` },
-    { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#ffffff"/><circle cx="50" cy="50" r="9" fill="#1a0a2e"/><circle cx="44" cy="44" r="4" fill="#ffffff"/>` },
-    { name:"spiral",    color:"#f97316", draw:s=>`<circle cx="50" cy="50" r="36" fill="${s.color}"/><circle cx="50" cy="50" r="28" fill="#0f0718"/><circle cx="50" cy="50" r="20" fill="${s.color}"/><circle cx="50" cy="50" r="12" fill="#0f0718"/><circle cx="50" cy="50" r="5" fill="${s.color}"/>` },
+    { name:"eye",       color:"#6366f1", draw:s=>`<ellipse cx="50" cy="50" rx="40" ry="22" fill="${s.color}"/><circle cx="50" cy="50" r="14" fill="#1a0030"/><circle cx="44" cy="44" r="5" fill="rgba(255,255,255,0.9)"/>` },
+    { name:"spiral",    color:"#f97316", draw:s=>`<path d="M50,50 m-2,0 a2,2 0 0,1 4,0 a6,6 0 0,1 -12,0 a12,12 0 0,1 24,0 a18,18 0 0,1 -36,0 a24,24 0 0,1 48,0" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="50" r="3" fill="${s.color}"/>` },
     { name:"clover",    color:"#34d399", draw:s=>`<circle cx="50" cy="32" r="18" fill="${s.color}"/><circle cx="68" cy="62" r="18" fill="${s.color}"/><circle cx="32" cy="62" r="18" fill="${s.color}"/><rect x="46" y="46" width="8" height="36" rx="4" fill="${s.color}"/>` },
 ];
 
 function getShapePreviewMs(diff) {
+    if (typeof PHP_ASSIGNED_PREP !== "undefined" && PHP_ASSIGNED_PREP !== null) return PHP_ASSIGNED_PREP * 1000;
     if (diff <= 1) return 10000;
     if (diff <= 3) return 20000;
     if (diff <= 5) return 30000;
@@ -152,6 +167,7 @@ async function fetchLeaderboardFromServer() {
     } catch { return []; }
 }
 async function refreshBoards() {
+    if (role === "student") { const b = document.getElementById("boards"); if (b) b.style.display = "none"; return; }
     const local = JSON.parse(localStorage.getItem(LBOARD) || "[]");
     let server = [];
     try { server = await fetchLeaderboardFromServer(); } catch {}
@@ -186,7 +202,8 @@ async function sendScoreToServer(entry) {
             time:           entry.completion_time,
             mistakes:       entry.mistakes,
             outcome:        entry.outcome,
-            classroom_code: classroomCode || ""
+            classroom_code: classroomCode || "",
+            reaction_time:  entry.reaction_time ?? (firstClickMs ? (firstClickMs / 1000).toFixed(2) : 0)
         });
         await fetch("php/submit_score.php", { method:"POST", body });
     } catch(e) {}
@@ -264,7 +281,8 @@ async function loadCharts() {
         const res    = await fetch(`php/stats.php?username=${encodeURIComponent(username)}`);
         allStatsData = await res.json();
         chartsLoaded = true;
-        activeStatTab = (["memory","shape","story","combined"].includes(selectedPuzzle) ? selectedPuzzle : null) || "memory";
+        const _sh = document.querySelector('#stats-modal h3'); if (_sh) _sh.textContent = `📊 ${username}'s Statistics`;
+        activeStatTab = selectedPuzzle || "memory";
         document.querySelectorAll(".stats-tab-btn").forEach(b => {
             b.classList.toggle("active", b.dataset.tab === activeStatTab);
         });
@@ -278,12 +296,24 @@ window.addEventListener("load", () => {
     if (playerNameEl) playerNameEl.textContent = username;
     if (window.WitchlightParticles) WitchlightParticles.mount("particles");
 
+    // ── Student-specific UI: hide controls students should never see ──────
+    if (role === "student") {
+        // No ← Puzzles — teacher chose the puzzle
+        const backBtnEl = document.getElementById("back-btn");
+        if (backBtnEl) backBtnEl.style.display = "none";
+        // No host/join/reset
+        ["host-btn","join-btn","reset-btn"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = "none";
+        });
+    }
+
     // ── Student assigned puzzle: skip prestart, go straight to game ──────
     if (PHP_ASSIGNED_PUZZLE && PHP_ASSIGNED_DIFF !== null) {
         selectedPuzzle = PHP_ASSIGNED_PUZZLE;
         difficulty     = PHP_ASSIGNED_DIFF;
 
-        // Hide puzzle selector controls that don't apply to assigned students
+        // Hide controls that don't apply to assigned students
         const preActions = document.querySelector(".pre-actions");
         if (preActions) {
             // Hide host/join/reset — student just plays their assigned puzzle
@@ -292,6 +322,9 @@ window.addEventListener("load", () => {
                 if (el) el.style.display = "none";
             });
         }
+        // Hide the ← Puzzles button — students don't choose their puzzle
+        const backBtnEl = document.getElementById("back-btn");
+        if (backBtnEl) backBtnEl.style.display = "none";
 
         // Update UI to show assignment before auto-starting
         if (startLevelInput) startLevelInput.value = difficulty;
@@ -314,8 +347,8 @@ window.addEventListener("load", () => {
             prestartSection.classList.add("hidden");
             gameSection.classList.remove("hidden");
             if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-            if (selectedPuzzle === "shape")       startShapePuzzle();
-            else if (selectedPuzzle === "story")  window.startStoryPuzzle();
+            if (selectedPuzzle === "shape")      startShapePuzzle();
+            else if (selectedPuzzle === "story") window.startStoryPuzzle();
             else startNewPuzzle();
         }, 1500);
 
@@ -358,7 +391,6 @@ document.querySelectorAll(".puzzle-card:not(.locked)").forEach(card => {
         document.querySelectorAll(".puzzle-card").forEach(c => c.classList.remove("selected"));
         card.classList.add("selected");
         selectedPuzzle = card.dataset.puzzle;
-        console.log("[EchoMind] puzzle selected:", selectedPuzzle);
         if (startLevelInput) updateSliderUI(startLevelInput.value);
     });
 });
@@ -374,11 +406,6 @@ function updateSliderUI(val) {
             else if (n <= 5) levelHint.textContent = "4×4 grid · 8 pairs · 30s preview";
             else if (n <= 7) levelHint.textContent = "6×4 grid · 12 pairs · 45s preview";
             else             levelHint.textContent = "6×6 grid · 18 pairs · 45s preview";
-        } else if (selectedPuzzle === "story") {
-            if (n <= 1)      levelHint.textContent = "Simple 2-picture stories · Beginner";
-            else if (n <= 3) levelHint.textContent = "3-picture sequences · Intermediate";
-            else if (n <= 6) levelHint.textContent = "Longer stories + questions · Advanced";
-            else             levelHint.textContent = "Complex narratives · Expert";
         } else {
             if (n < 3)      levelHint.textContent = "3×3 grid · Beginner";
             else if (n < 7) levelHint.textContent = "4×4 grid · Intermediate";
@@ -418,7 +445,7 @@ if (startBtn) {
         prestartSection.classList.add("hidden");
         gameSection.classList.remove("hidden");
         if (window.WitchlightParticles) WitchlightParticles.mount("particles-game");
-        if      (selectedPuzzle === "shape")  startShapePuzzle();
+        if (selectedPuzzle === "shape")      startShapePuzzle();
         else if (selectedPuzzle === "story") window.startStoryPuzzle();
         else startNewPuzzle();
     });
@@ -430,11 +457,11 @@ if (aboutBtnGame) aboutBtnGame.addEventListener("click", () => aboutOverlay.clas
 if (aboutClose)   aboutClose.addEventListener("click",   () => aboutOverlay.classList.add("hidden"));
 
 function setMuted(m) {
-    muted = m; // controls ambient only — TTS voice is unaffected
+    muted = m;
     const lbl = muted ? "🔈" : "🔊";
     [muteBtnPre, muteBtnGame].forEach(b => { if (b) b.textContent = lbl; });
     if (muted) { if (ambient) { ambient.volume = 0; ambient.pause(); } }
-    else        { if (ambient) { ambient.volume = 0.35; ambient.play(); } }
+    else        { if (ambient) ambient.play(); }
 }
 [muteBtnPre, muteBtnGame].forEach(b => {
     if (b) b.addEventListener("click", () => setMuted(!muted));
@@ -447,13 +474,22 @@ if (resetBtn) resetBtn.addEventListener("click", () => {
     alert("Progress cleared.");
 });
 
-if (logoutBtn) logoutBtn.addEventListener("click", () => { window.location.href = "logout.php"; });
+if (logoutBtn) {
+    if (role === "student") {
+        logoutBtn.textContent = "☰ Student List";
+        logoutBtn.addEventListener("click", () => {
+            window.location.href = "php/student_logout.php";
+        });
+    } else {
+        logoutBtn.addEventListener("click", () => {
+            window.location.href = "logout.php";
+        });
+    }
+}
 
 const backBtn = document.getElementById("back-btn");
 if (backBtn) backBtn.addEventListener("click", () => {
-    // Stop any ongoing story narration immediately
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    // Resume ambient if story paused it
     if (window._storyPausedAmbient) {
         const amb = document.getElementById("ambient");
         if (amb) amb.play().catch(()=>{});
@@ -461,6 +497,8 @@ if (backBtn) backBtn.addEventListener("click", () => {
     }
     clearInterval(window.__t);
     clearInterval(window.__countdown);
+    // Students go to student list and clear their active session
+    if (role === "student") { window.location.href = "php/student_logout.php"; return; }
     gameSection.classList.add("hidden");
     prestartSection.classList.remove("hidden");
     puzzleEl.innerHTML = "";
@@ -474,17 +512,17 @@ if (backBtn) backBtn.addEventListener("click", () => {
 });
 
 if (giveupBtn) giveupBtn.addEventListener("click", () => {
-    // Stop any ongoing story narration immediately
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     clearInterval(window.__t);
     clearInterval(window.__countdown);
+    firstClickMs = 0;
     const timeSec = startMs ? (Date.now() - startMs) / 1000 : 0;
     const entry = { username, puzzle_type: selectedPuzzle, difficulty, completion_time: timeSec, mistakes, outcome: "giveup" };
     pushLeaderboard(entry);
     sendScoreToServer(entry);
     difficulty = heuristicNext(difficulty, timeSec, mistakes);
     saveState();
-    if (selectedPuzzle === "shape")  startShapePuzzle();
+    if (selectedPuzzle === "shape")      startShapePuzzle();
     else if (selectedPuzzle === "story") window.startStoryPuzzle();
     else startNewPuzzle();
 });
@@ -494,7 +532,7 @@ function startNewPuzzle() {
     overlay.classList.add("hidden");
     puzzleEl.innerHTML = "";
     puzzleEl.className = "";
-    mistakes = 0; sequence = []; playerIndex = 0;
+    mistakes = 0; sequence = []; playerIndex = 0; firstClickMs = 0;
 
     let size = 3;
     if (difficulty >= 3 && difficulty < 7) size = 4;
@@ -550,6 +588,7 @@ async function flashSequence() {
 
 function onTileClick(i, tile) {
     if (flashing) return;
+    if (!firstClickMs && startMs) firstClickMs = Date.now() - startMs;
     if (sequence[playerIndex] === i) {
         tile.classList.add("on");
         setTimeout(() => tile.classList.remove("on"), 180);
@@ -557,8 +596,8 @@ function onTileClick(i, tile) {
         if (playerIndex === sequence.length) onSolved();
     } else {
         mistakes++;
-        tile.classList.add("bad");
-        setTimeout(() => tile.classList.remove("bad"), 220);
+        tile.classList.add("tile-shake");
+        setTimeout(() => tile.classList.remove("tile-shake"), 400);
     }
 }
 
@@ -580,9 +619,10 @@ async function onSolved() {
 
 if (continueBtn) continueBtn.addEventListener("click", () => {
     overlay.classList.add("hidden");
+    firstClickMs = 0;
     difficulty = heuristicNext(difficulty, parseFloat(resTime.textContent), parseInt(resMistakes.textContent));
     saveState();
-    if (selectedPuzzle === "shape")  startShapePuzzle();
+    if (selectedPuzzle === "shape") startShapePuzzle();
     else if (selectedPuzzle === "story") window.startStoryPuzzle();
     else startNewPuzzle();
 });
@@ -595,7 +635,7 @@ if (retryBtn) retryBtn.addEventListener("click", () => {
     } else if (selectedPuzzle === "story") {
         window.startStoryPuzzle();
     } else {
-        playerIndex = 0; startMs = 0;
+        playerIndex = 0; startMs = 0; firstClickMs = 0;
         timerEl.textContent = "Time: 0.0s";
         flashSequence();
     }
@@ -622,6 +662,7 @@ function startShapePuzzle() {
     shapeLocked  = false;
     shapeMatched = 0;
     startMs      = 0;
+    firstClickMs = 0;
 
     const { cols, rows } = getShapeGrid(difficulty);
     shapePairs = (cols * rows) / 2;
@@ -655,14 +696,8 @@ function startShapePuzzle() {
 
     diffEl.textContent = difficulty;
 
-    // Add .previewing synchronously — CSS opacity/z-index shows front, hides back.
-    // No rAF needed (and rAF caused a race: it could fire after the NEXT puzzle
-    // rebuild had already cleared shapeCards, leaving cards without the class).
-    shapeCards.forEach(c => {
-        c.inner.style.transition = "none";
-        c.inner.style.transform  = "";
-        c.el.classList.add("previewing");
-        c.faceUp = true;
+    requestAnimationFrame(() => {
+        shapeCards.forEach(c => { c.el.classList.add("previewing"); c.faceUp = true; });
     });
 
     const previewMs  = getShapePreviewMs(difficulty);
@@ -698,12 +733,7 @@ function startShapePuzzle() {
         indices.forEach((cardIdx, i) => {
             setTimeout(() => {
                 const c = shapeCards[cardIdx];
-                if (!c.matched) {
-                    c.el.classList.remove("previewing");
-                    // Re-enable transition for the flip-back animation
-                    c.inner.style.transition = "";
-                    c.faceUp = false;
-                }
+                if (!c.matched) { c.el.classList.remove("previewing"); c.faceUp = false; }
             }, i * staggerMs);
         });
         setTimeout(() => {
@@ -722,6 +752,7 @@ function startShapePuzzle() {
 
 function onShapeCardClick(card) {
     if (shapeLocked || card.matched || card.faceUp || shapeFlipped.length >= 2) return;
+    if (!firstClickMs && startMs) firstClickMs = Date.now() - startMs;
     card.el.classList.add("revealed");
     card.faceUp = true;
     shapeFlipped.push(card);
@@ -737,9 +768,9 @@ function onShapeCardClick(card) {
             }, 300);
         } else {
             mistakes++;
-            a.el.classList.add("shape-wrong"); b.el.classList.add("shape-wrong");
+            // No red flash — cards quietly flip back
             setTimeout(() => {
-                a.el.classList.remove("shape-wrong","revealed"); b.el.classList.remove("shape-wrong","revealed");
+                a.el.classList.remove("revealed"); b.el.classList.remove("revealed");
                 a.faceUp = false; b.faceUp = false;
                 shapeFlipped = []; shapeLocked = false;
             }, 900);
@@ -859,8 +890,16 @@ if (joinBtn) joinBtn.addEventListener("click", openJoinModal);
 if (openDashBtn)  openDashBtn.addEventListener("click",  () => { dashOverlay.classList.remove("hidden"); loadDashboard(); });
 if (closeDashBtn) closeDashBtn.addEventListener("click", () => dashOverlay.classList.add("hidden"));
 
-async function loadDashboard() {
-    try { const res=await fetch("php/get_classroom.php"); renderDashboard(await res.json()); }
+let _activeClassroomCode = null;
+
+async function loadDashboard(code) {
+    try {
+        const url = code ? `php/get_classroom.php?code=${code}` : "php/get_classroom.php";
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.classroom) _activeClassroomCode = data.classroom.classroom_code;
+        renderDashboard(data);
+    }
     catch(e) { console.error("Dashboard load failed",e); }
 }
 
@@ -868,7 +907,32 @@ function renderDashboard(data) {
     const noEl=document.getElementById("dash-no-classroom"), hasEl=document.getElementById("dash-classroom");
     if (!data.classroom) { noEl.style.display="block"; hasEl.style.display="none"; setupCreateClassroom(); return; }
     noEl.style.display="none"; hasEl.style.display="block";
-    const code=data.classroom.classroom_code;
+    _activeClassroomCode = data.classroom.classroom_code;
+    const code = data.classroom.classroom_code;
+
+    // ── Classroom switcher ───────────────────────────────────────────────
+    let switcherEl = document.getElementById("classroom-switcher");
+    if (!switcherEl) {
+        switcherEl = document.createElement("div");
+        switcherEl.id = "classroom-switcher";
+        switcherEl.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;";
+        hasEl.insertBefore(switcherEl, hasEl.firstChild);
+    }
+    const opts = (data.classrooms||[data.classroom]).map(cl =>
+        `<option value="${cl.classroom_code}" ${cl.classroom_code===code?"selected":""}>${cl.classroom_name}</option>`
+    ).join("");
+    switcherEl.innerHTML = `
+        <select id="classroom-select" style="flex:1;background:#0f0718;color:var(--text);border:1px solid #3d2058;border-radius:8px;padding:7px 10px;font-family:inherit;font-size:.88rem;">${opts}</select>
+        <button id="new-classroom-btn" class="small ghost" style="margin:0;white-space:nowrap;">+ New Classroom</button>`;
+    document.getElementById("classroom-select").onchange = function() { loadDashboard(this.value); };
+    document.getElementById("new-classroom-btn").onclick = () => {
+        const name = prompt("Classroom name:", "New Classroom");
+        if (!name) return;
+        const fd = new FormData(); fd.append("classroom_name", name.trim());
+        fetch("php/create_classroom.php",{method:"POST",body:fd}).then(r=>r.json()).then(d=>{ if(d.code) loadDashboard(d.code); });
+    };
+
+    // ── Code + link ──────────────────────────────────────────────────────
     document.getElementById("dash-code-display").textContent=code;
     const base=window.location.href.replace(/index\.php.*$/,"");
     const link=`${base}classroom.php?code=${code}`;
@@ -886,7 +950,7 @@ function renderDashboard(data) {
             return `
             <div class="roster-row" style="flex-direction:column;align-items:stretch;gap:8px;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="roster-name">👤 ${s.student_name}</span>
+                <span class="roster-name">👤 ${s.student_name} ${s.is_active ? '<span style="color:#4ade80;font-size:.75rem;">● online</span>' : ''}</span>
                 <button class="ghost small remove-student-btn" data-name="${s.student_name}" data-code="${code}" style="margin:0;">Remove</button>
               </div>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -898,44 +962,39 @@ function renderDashboard(data) {
                 <select class="assign-diff-sel ghost small" data-name="${s.student_name}" data-code="${code}" style="width:80px;background:#0f0718;color:var(--text);border:1px solid #3d2058;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:.8rem;">
                   ${Array.from({length:11},(_,i)=>`<option value="${i}" ${diff==i?"selected":""}>${i===0?"Lvl 0":"Lvl "+i}</option>`).join("")}
                 </select>
+                <select class="assign-prep-sel ghost small" data-name="${s.student_name}" data-code="${code}" title="Prep time" style="width:90px;background:#0f0718;color:var(--text);border:1px solid #3d2058;border-radius:8px;padding:5px 8px;font-family:inherit;font-size:.8rem;">
+                  ${[10,20,30,45,60,90,120].map(v=>`<option value="${v}" ${(s.assigned_prep_time??45)==v?"selected":""}>${v}s prep</option>`).join("")}
+                </select>
                 <button class="save-assign-btn small" data-name="${s.student_name}" data-code="${code}" style="margin:0;padding:5px 12px;font-size:.8rem;">Save</button>
                 <span class="assign-saved-msg" style="font-size:.75rem;color:#4ade80;display:none;">✓ Saved</span>
               </div>
             </div>`;
         }).join("");
 
-        // Remove buttons
         document.querySelectorAll(".remove-student-btn").forEach(btn=>{
             btn.addEventListener("click",async()=>{
                 const fd=new FormData(); fd.append("student_name",btn.dataset.name); fd.append("classroom_code",btn.dataset.code);
-                await fetch("php/remove_student.php",{method:"POST",body:fd}); loadDashboard();
+                await fetch("php/remove_student.php",{method:"POST",body:fd}); loadDashboard(btn.dataset.code);
             });
         });
 
-        // Save assignment buttons
         document.querySelectorAll(".save-assign-btn").forEach(btn => {
             btn.addEventListener("click", async () => {
                 const name = btn.dataset.name, code = btn.dataset.code;
                 const row  = btn.closest(".roster-row");
-                const puzzle = row.querySelector(".assign-puzzle-sel").value;
-                const diff   = row.querySelector(".assign-diff-sel").value;
+                const puzzle   = row.querySelector(".assign-puzzle-sel").value;
+                const diff     = row.querySelector(".assign-diff-sel").value;
+                const prepTime = row.querySelector(".assign-prep-sel")?.value ?? 45;
                 const fd = new FormData();
-                fd.append("student_name",    name);
-                fd.append("classroom_code",  code);
-                fd.append("puzzle",          puzzle);
-                fd.append("difficulty",      diff);
-                const res  = await fetch("php/assign_student.php", { method:"POST", body:fd });
+                fd.append("student_name", name); fd.append("classroom_code", code);
+                fd.append("puzzle", puzzle); fd.append("difficulty", diff); fd.append("prep_time", prepTime);
+                const res  = await fetch("php/assign_student.php", {method:"POST",body:fd});
                 const data = await res.json();
-                if (data.ok) {
-                    const msg = row.querySelector(".assign-saved-msg");
-                    msg.style.display = "inline";
-                    setTimeout(() => msg.style.display = "none", 2000);
-                }
+                if (data.ok) { const msg=row.querySelector(".assign-saved-msg"); msg.style.display="inline"; setTimeout(()=>msg.style.display="none",2000); }
             });
         });
     }
 
-    // Scores section
     const scoresSection=document.getElementById("student-scores-section");
     const scoresList=document.getElementById("student-scores-list");
     if (data.scores&&Object.keys(data.scores).length>0) {
@@ -944,8 +1003,8 @@ function renderDashboard(data) {
             <div class="student-score-block">
                 <div class="student-score-name">👤 ${student}</div>
                 <table style="width:100%;font-size:.78rem;">
-                    <thead><tr><th>Puzzle</th><th>Diff</th><th>Time</th><th>Mistakes</th><th>Result</th></tr></thead>
-                    <tbody>${scores.map(sc=>`<tr><td>${puzzleLabel(sc.puzzle_type)}</td><td>${sc.difficulty}</td><td>${parseFloat(sc.completion_time).toFixed(1)}s</td><td>${sc.mistakes}</td><td>${sc.outcome}</td></tr>`).join("")}</tbody>
+                    <thead><tr><th>Puzzle</th><th>Diff</th><th>Time</th><th>Start Time</th><th>Mistakes</th><th>Result</th></tr></thead>
+                    <tbody>${scores.map(sc=>`<tr><td>${puzzleLabel(sc.puzzle_type)}</td><td>${sc.difficulty}</td><td>${parseFloat(sc.completion_time).toFixed(1)}s</td><td>${(sc.reaction_time>0&&sc.reaction_time<120)?parseFloat(sc.reaction_time).toFixed(1)+"s":"—"}</td><td>${sc.mistakes}</td><td>${sc.outcome}</td></tr>`).join("")}</tbody>
                 </table>
             </div>`).join("");
     } else { scoresSection.style.display="none"; }
@@ -958,8 +1017,28 @@ function setupCreateClassroom() {
         const name=document.getElementById("classroom-name-input").value.trim()||"My Classroom";
         const fd=new FormData(); fd.append("classroom_name",name);
         const data=await (await fetch("php/create_classroom.php",{method:"POST",body:fd})).json();
-        if (data.error){alert(data.error);return;} loadDashboard();
+        if (data.error){alert(data.error);return;} loadDashboard(data.code);
     };
+    // Add another classroom button if teacher already has classrooms
+    const hasEl = document.getElementById("dash-classroom");
+    if (hasEl && hasEl.style.display !== "none") {
+        const existing = document.getElementById("add-classroom-btn-row");
+        if (!existing) {
+            const row = document.createElement("div");
+            row.id = "add-classroom-btn-row";
+            row.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,95,203,.1);";
+            row.innerHTML = `<input type="text" id="new-classroom-name" placeholder="New classroom name" style="flex:1;margin:0;max-width:none;"/>
+                <button class="small" id="add-classroom-confirm" style="margin:0;">+ New Classroom</button>`;
+            hasEl.appendChild(row);
+            document.getElementById("add-classroom-confirm").onclick = async () => {
+                const name = document.getElementById("new-classroom-name").value.trim() || "My Classroom";
+                const fd = new FormData(); fd.append("classroom_name", name);
+                const data = await (await fetch("php/create_classroom.php",{method:"POST",body:fd})).json();
+                if (data.error){alert(data.error);return;}
+                loadDashboard(data.code);
+            };
+        }
+    }
 }
 function setupAddStudent(code) {
     const addBtn=document.getElementById("add-student-btn");
@@ -972,6 +1051,6 @@ function setupAddStudent(code) {
         const fd=new FormData(); fd.append("student_name",name); fd.append("classroom_code",code);
         const data=await (await fetch("php/add_student.php",{method:"POST",body:fd})).json();
         if (data.error){if(addErr)addErr.textContent=data.error;return;}
-        if(addInput)addInput.value=""; if(addErr)addErr.textContent=""; loadDashboard();
+        if(addInput)addInput.value=""; if(addErr)addErr.textContent=""; loadDashboard(code);
     };
 }

@@ -110,6 +110,14 @@ input[type=range]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%;
 .tile.bad{   animation:bad   300ms ease; }
 @keyframes flash{ 0%{box-shadow:0 0 0 rgba(255,95,203,0);background:#2b0f3a} 25%{box-shadow:0 0 26px rgba(255,95,203,.7)} 60%{box-shadow:0 0 8px rgba(255,95,203,.3)} }
 @keyframes bad{   0%{box-shadow:0 0 0 rgba(255,73,113,0)} 50%{box-shadow:0 0 18px rgba(255,73,113,.9)} 100%{box-shadow:0 0 0 rgba(255,73,113,0)} }
+@keyframes tileShake{
+  0%,100%{ transform:translateX(0); }
+  20%    { transform:translateX(-5px); }
+  40%    { transform:translateX(5px); }
+  60%    { transform:translateX(-3px); }
+  80%    { transform:translateX(3px); }
+}
+.tile.tile-shake{ animation:tileShake 0.4s ease; }
 
 .controls{ display:flex; justify-content:center; gap:6px; flex-shrink:0; z-index:1; margin:2px 0; }
 
@@ -479,10 +487,10 @@ button.story-replay:hover { opacity: 1; }
   transform:    translateY(-2px);
   box-shadow:   0 6px 22px rgba(201,44,255,.2);
 }
-.story-scene-card.dragging      { opacity: .45; cursor: grabbing; transform: scale(1.04); }
-.story-scene-card.drag-over     { border-color: #c92cff; background: rgba(201,44,255,.18); transform: scale(1.04); }
+.story-scene-card.dragging  { opacity: .45; cursor: grabbing; transform: scale(1.04); }
+.story-scene-card.drag-over { border-color: #c92cff; background: rgba(201,44,255,.18); transform: scale(1.04); }
 .story-scene-card.scene-correct { border-color: #4ade80; background: rgba(74,222,128,.12); box-shadow: 0 0 18px rgba(74,222,128,.35); }
-.story-scene-card.scene-wrong   { border-color: #f87171; background: rgba(248,113,113,.12); }
+/* scene-wrong: red removed — shake only */
 @keyframes sceneShake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-6px); }
@@ -539,7 +547,7 @@ button.story-replay:hover { opacity: 1; }
 }
 .story-choice-btn:disabled { cursor: default; opacity: .7; }
 .story-choice-btn.choice-correct { border-color: #4ade80; background: rgba(74,222,128,.18); color: #4ade80; }
-.story-choice-btn.choice-wrong   { border-color: #f87171; background: rgba(248,113,113,.18); color: #f87171; }
+/* choice-wrong: red removed — shake only */
 @keyframes choiceShake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-8px); }
@@ -566,24 +574,7 @@ button.story-replay:hover { opacity: 1; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SHAPE MEMORY — Preview fix (MUST stay at absolute bottom of file)
-   Wins the specificity cascade over .shape-card-front { transform: rotateY(180deg) }
    ═══════════════════════════════════════════════════════════════════════════ */
-.shape-card.previewing .shape-card-inner {
-  transform: rotateY(180deg) !important;
-  transition: none !important;
-}
-.shape-card.previewing .shape-card-front {
-  backface-visibility: visible !important;
-  -webkit-backface-visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   SHAPE MEMORY — PREVIEW DISPLAY FIX (must stay at very bottom)
-   Bypasses 3D transform entirely during preview to avoid GPU compositing
-   issues where preserve-3d breaks inside stacked compositing layers.
-   During .previewing: front forced visible, back hidden — no 3D tricks.
-   ══════════════════════════════════════════════════════════════════════════ */
 .shape-card.previewing .shape-card-inner {
   transform: none !important;
   transition: none !important;
@@ -602,7 +593,7 @@ button.story-replay:hover { opacity: 1; }
   z-index: 1 !important;
 }
 
-/* ── Story narration fade-out (after voice finishes, before task reveals) ── */
+/* ── Story narration fade-out ── */
 .story-narration-fadeout {
   animation: storyFadeOut 0.6s ease forwards;
 }

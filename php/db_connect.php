@@ -43,6 +43,8 @@ $conn->query("CREATE TABLE IF NOT EXISTS students(
 /* Add assignment columns — safe to run every time (IF NOT EXISTS) */
 $conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_puzzle VARCHAR(32) DEFAULT 'memory'");
 $conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_difficulty INT DEFAULT 5");
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_prep_time INT DEFAULT 45");
+$conn->query("ALTER TABLE scores ADD COLUMN IF NOT EXISTS reaction_time FLOAT DEFAULT 0");
 
 /* Scores Table */
 $conn->query("CREATE TABLE IF NOT EXISTS scores(

@@ -19,9 +19,13 @@ if ($res->num_rows == 0) {
 }
 $classroom = $res->fetch_assoc();
 
+// Ensure active session tracking columns exist
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS is_active TINYINT(1) DEFAULT 0");
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token VARCHAR(64) DEFAULT NULL");
+
 // Get students WITH assignments
 $sts = $conn->prepare("
-    SELECT student_name, assigned_puzzle, assigned_difficulty
+    SELECT student_name, assigned_puzzle, assigned_difficulty, is_active
     FROM students
     WHERE classroom_code = ?
     ORDER BY student_name ASC
@@ -42,13 +46,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($s['student_name'] === $chosen) { $matched = $s; break; }
     }
     if ($matched) {
-        $_SESSION['username']            = $chosen;
-        $_SESSION['classroom_code']      = $code;
-        $_SESSION['role']                = 'student';
-        $_SESSION['assigned_puzzle']     = $matched['assigned_puzzle']    ?? 'memory';
-        $_SESSION['assigned_difficulty'] = $matched['assigned_difficulty'] ?? 0;
-        header("Location: index.php");
-        exit;
+        // Block if another session is already active for this student
+        if ($matched['is_active']) {
+            $error = "This student is already in an active session. Please wait or ask your teacher.";
+        } else {
+            // Generate a unique token for this session
+            $token = bin2hex(random_bytes(16));
+            // Claim the session
+            $claim = $conn->prepare("UPDATE students SET is_active=1, session_token=? WHERE classroom_code=? AND student_name=?");
+            $claim->bind_param("sss", $token, $code, $chosen);
+            $claim->execute();
+            $_SESSION['username']            = $chosen;
+            $_SESSION['classroom_code']      = $code;
+            $_SESSION['role']                = 'student';
+            $_SESSION['session_token']       = $token;
+            $_SESSION['assigned_puzzle']     = $matched['assigned_puzzle']    ?? 'memory';
+            $_SESSION['assigned_difficulty'] = $matched['assigned_difficulty'] ?? 0;
+            header("Location: index.php");
+            exit;
+        }
     } else {
         $error = "Please select your name from the list.";
     }
@@ -133,12 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php foreach ($students as $s):
             $puzzle = $s['assigned_puzzle'] ?? 'memory';
             $diff   = $s['assigned_difficulty'] ?? 0;
-            $puzzleLabel = $puzzle === 'shape' ? '🔷 Shape Memory' : ($puzzle === 'story' ? '📖 Story Recall' : '🌙 Witchlight Memory');
+            $puzzleLabel = $puzzle === 'shape' ? '🔷 Shape Memory' : '🌙 Witchlight Memory';
             $diffLabel   = $diff > 0 ? "Level $diff" : "Level 0";
           ?>
             <div class="student-item" onclick="selectStudent(this, '<?php echo htmlspecialchars($s['student_name'], ENT_QUOTES); ?>')">
               <span class="s-name">👤 <?php echo htmlspecialchars($s['student_name']); ?></span>
-              <span class="s-assign"><?php echo $puzzleLabel; ?><br><?php echo $diffLabel; ?></span>
+              <span class="s-assign"><?php echo $puzzleLabel; ?><br><?php echo $diffLabel; ?><?php if ($s['is_active']): ?><br><span style="color:#4ade80;font-size:.7rem;">● In session</span><?php endif; ?></span>
             </div>
           <?php endforeach; ?>
         </div>

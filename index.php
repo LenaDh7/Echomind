@@ -1,13 +1,34 @@
 <?php
 session_start();
 require_once "php/db_connect.php";
-if (!isset($_SESSION['username'])) { header("Location: login.php"); exit; }
+
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
+}
+
 $username            = $_SESSION['username'];
 $role                = $_SESSION['role'] ?? 'player';
 $classroom_code      = $_SESSION['classroom_code'] ?? null;
+$session_token       = $_SESSION['session_token']      ?? null;
 $assigned_puzzle     = $_SESSION['assigned_puzzle'] ?? null;
-$assigned_difficulty = $_SESSION['assigned_difficulty'] ?? null;
-unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
+$assigned_difficulty  = $_SESSION['assigned_difficulty']  ?? null;
+$assigned_prep_time   = $_SESSION['assigned_prep_time']   ?? null;
+unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty'], $_SESSION['assigned_prep_time']);
+
+// Students: keep the session alive so student_logout.php can read role/code/token
+// when the student clicks "Student List". Store classroom code in a cookie so
+// that if they refresh (no assignment left), we redirect to classroom.php not login.php.
+if ($role === 'student') {
+    if ($classroom_code) {
+        setcookie('echomind_classroom', $classroom_code, time() + 3600, '/', '', false, true);
+    }
+    // Redirect back to classroom if student refreshes (assignment already consumed above)
+    if (!$assigned_puzzle) {
+        header("Location: classroom.php?code=" . urlencode($classroom_code ?? ''));
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,36 +45,28 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
 <body>
 <div class="wrap">
 
-  <!-- ══════════════════════════════════════
-       PUZZLE SELECT SCREEN
-  ══════════════════════════════════════ -->
   <section id="prestart">
     <canvas id="particles" class="particles"></canvas>
-
     <div class="pre-inner">
       <h2>Welcome, <span id="playername"></span></h2>
       <p class="hint">Choose your puzzle and starting level.</p>
 
       <div class="puzzle-cards">
-
         <div class="puzzle-card selected" data-puzzle="memory">
           <div class="card-icon">🌙</div>
           <div class="card-title">Witchlight Memory</div>
           <div class="card-desc">Watch the pattern of lights and repeat the sequence.</div>
         </div>
-
         <div class="puzzle-card" data-puzzle="shape">
           <div class="card-icon">🔷</div>
           <div class="card-title">Shape Memory</div>
           <div class="card-desc">Memorise the cards, then find every matching pair.</div>
         </div>
-
         <div class="puzzle-card" data-puzzle="story">
           <div class="card-icon">📖</div>
           <div class="card-title">Story Recall</div>
           <div class="card-desc">Listen to a story, then order pictures or answer a question.</div>
         </div>
-
       </div>
 
       <div class="slider-section">
@@ -78,7 +91,9 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
           <button id="open-dashboard-btn" class="ghost small">🏫 My Classroom</button>
           <?php endif; ?>
           <button id="reset-btn" class="ghost small">Reset Progress</button>
+          <?php if ($role !== 'student'): ?>
           <a href="logout.php" class="ghost small pre-logout-btn">⏻ Logout</a>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -96,9 +111,6 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
     </div>
   </section>
 
-  <!-- ══════════════════════════════════════
-       GAME SCREEN
-  ══════════════════════════════════════ -->
   <section id="game" class="hidden">
     <canvas id="particles-game" class="particles"></canvas>
 
@@ -124,7 +136,7 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
 
     <div class="controls">
       <button id="back-btn"    class="ghost small">← Puzzles</button>
-      <button id="giveup-btn"  class="ghost small">Give Up</button>
+      <button id="giveup-btn"  class="ghost small">↺ Restart</button>
       <button id="logout-btn"  class="ghost small">Logout</button>
       <button id="show-stats"  class="ghost small">📊 Stats</button>
     </div>
@@ -154,9 +166,6 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
 
 </div>
 
-<!-- ══════════════════════════════════════
-     TEACHER DASHBOARD OVERLAY
-══════════════════════════════════════ -->
 <?php if ($role === 'teacher'): ?>
 <div id="dashboard-overlay" class="hidden">
   <div class="dashboard-box">
@@ -194,7 +203,6 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
 </div>
 <?php endif; ?>
 
-<!-- Stats modal -->
 <div id="stats-modal" class="hidden">
   <div class="stats-modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -229,7 +237,6 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
   </div>
 </div>
 
-<!-- Multiplayer overlay -->
 <div id="mp-overlay" class="hidden">
   <div class="mp-box">
     <h2 id="mp-title">Multiplayer</h2>
@@ -248,6 +255,8 @@ unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty']);
   const PHP_CLASSROOM_CODE    = <?php echo json_encode($classroom_code); ?>;
   const PHP_ASSIGNED_PUZZLE   = <?php echo json_encode($assigned_puzzle); ?>;
   const PHP_ASSIGNED_DIFF     = <?php echo json_encode($assigned_difficulty !== null ? (int)$assigned_difficulty : null); ?>;
+  const PHP_ASSIGNED_PREP     = <?php echo json_encode($assigned_prep_time  !== null ? (int)$assigned_prep_time  : null); ?>;
+  const PHP_SESSION_TOKEN     = <?php echo json_encode($session_token ?? null); ?>;
 </script>
 <script src="story_data.js"></script>
 <script src="story_puzzle.js"></script>

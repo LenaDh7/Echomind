@@ -276,6 +276,7 @@ function _onTouchEnd(e) {
 
 // ── Check order ───────────────────────────────────────────────────────────────
 function _checkOrder() {
+  if (typeof firstClickMs !== "undefined" && !firstClickMs && startMs) firstClickMs = Date.now() - startMs;
   const grid   = document.getElementById("story-order-grid");
   if (!grid) return;
   const cards  = [...grid.querySelectorAll(".story-scene-card")];
@@ -288,18 +289,13 @@ function _checkOrder() {
     setTimeout(_storyWin, 500);
   } else {
     mistakes++;
+    // No red flash — just shake the wrong cards
     cards.forEach((c, i) => {
-      c.classList.add(parseInt(c.dataset.sceneIdx) === correct[i] ? "scene-correct" : "scene-wrong");
+      if (parseInt(c.dataset.sceneIdx) !== correct[i]) {
+        c.classList.add("scene-shake");
+        setTimeout(() => c.classList.remove("scene-shake"), 600);
+      }
     });
-    setTimeout(() => {
-      cards.forEach(c => c.classList.remove("scene-wrong", "scene-correct"));
-      cards.forEach((c, i) => {
-        if (parseInt(c.dataset.sceneIdx) !== correct[i]) {
-          c.classList.add("scene-shake");
-          setTimeout(() => c.classList.remove("scene-shake"), 600);
-        }
-      });
-    }, 700);
   }
 }
 
@@ -329,22 +325,19 @@ function _buildQuestionTask(container) {
 }
 
 function _checkAnswer(chosen, btn, grid) {
+  if (typeof firstClickMs !== "undefined" && !firstClickMs && startMs) firstClickMs = Date.now() - startMs;
   grid.querySelectorAll(".story-choice-btn").forEach(b => b.disabled = true);
   if (chosen === _storyData.answer) {
     btn.classList.add("choice-correct");
     setTimeout(_storyWin, 600);
   } else {
     mistakes++;
-    btn.classList.add("choice-wrong");
-    // Shake wrong answer, then let them try again — correct answer stays hidden
+    // No red flash — just shake the button, then re-enable
+    btn.classList.add("choice-shake");
     setTimeout(() => {
-      btn.classList.remove("choice-wrong");
-      btn.classList.add("choice-shake");
-      setTimeout(() => {
-        btn.classList.remove("choice-shake");
-        grid.querySelectorAll(".story-choice-btn").forEach(b => b.disabled = false);
-      }, 500);
-    }, 400);
+      btn.classList.remove("choice-shake");
+      grid.querySelectorAll(".story-choice-btn").forEach(b => b.disabled = false);
+    }, 500);
   }
 }
 
@@ -352,12 +345,8 @@ function _checkAnswer(chosen, btn, grid) {
 function _storyWin() {
   clearInterval(window.__t);
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-  // Resume ambient music if we paused it
-  if (window._storyPausedAmbient) {
-    const ambient = document.getElementById("ambient");
-    if (ambient) ambient.play().catch(()=>{});
-    window._storyPausedAmbient = false;
-  }
+  // Keep music paused — it will resume when leaving the story puzzle
+  // (back btn or continuing to next puzzle)
 
   const timeSec = startMs ? ((Date.now() - startMs) / 1000).toFixed(1) : "0.0";
   _statusEl().textContent = "Story solved! ✨";
