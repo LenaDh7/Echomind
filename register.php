@@ -2,7 +2,6 @@
 session_start();
 include 'php/db_connect.php';
 
-// Ensure email column exists
 $conn->query("ALTER TABLE players ADD COLUMN IF NOT EXISTS email VARCHAR(128) UNIQUE");
 
 $message = "";

@@ -1,8 +1,3 @@
-// ─── Story Recall Puzzle ─────────────────────────────────────────────────────
-// Loaded after story_data.js. Integrated with script.js globals.
-// DOM refs resolved at call-time to avoid const-scope issues with script.js.
-
-// ── Lazy DOM accessors ───────────────────────────────────────────────────────
 const _el = id => document.getElementById(id);
 function _puzzleEl()   { return _el("puzzle"); }
 function _diffEl()     { return _el("difficulty"); }
@@ -19,13 +14,11 @@ let _dragSrc      = null;
 let _touchCard    = null;
 let _touchClone   = null;
 
-// ── Entry point ──────────────────────────────────────────────────────────────
 function startStoryPuzzle() {
   clearInterval(window.__t);
   clearInterval(window.__countdown);
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   document.getElementById("skip-flash-btn")?.remove();
-  // Pause ambient music so it doesn't compete with the narration voice
   const ambient = document.getElementById("ambient");
   if (ambient && !ambient.paused) { ambient.pause(); window._storyPausedAmbient = true; }
 
@@ -41,17 +34,14 @@ function startStoryPuzzle() {
   _storyData    = pickStory(difficulty);
   _storySubMode = pickSubMode(_storyData, difficulty);
 
-  // Fallback if mode lacks assets
   if (_storySubMode === "order" && (!_storyData.scenes || _storyData.scenes.length < 2)) _storySubMode = "question";
   if (_storySubMode === "question" && !_storyData.question) _storySubMode = "order";
 
   _buildUI();
 }
 
-// ── Build initial UI ─────────────────────────────────────────────────────────
 function _buildUI() {
   const puzzleEl = _puzzleEl();
-  // Mode badge + instruction
   const header = document.createElement("div");
   header.className = "story-header";
   header.innerHTML = `
@@ -59,7 +49,6 @@ function _buildUI() {
     <p class="story-instruction">Listen carefully to the story…</p>`;
   puzzleEl.appendChild(header);
 
-  // Narration box
   const narBox = document.createElement("div");
   narBox.className = "story-narration";
   narBox.id = "story-narration";
@@ -69,7 +58,6 @@ function _buildUI() {
     <button class="ghost story-replay hidden" id="story-replay">↩ Replay story</button>`;
   puzzleEl.appendChild(narBox);
 
-  // Task area (revealed after narration)
   const task = document.createElement("div");
   task.className = "story-task hidden";
   task.id = "story-task";
@@ -78,9 +66,7 @@ function _buildUI() {
   setTimeout(_narrate, 500);
 }
 
-// ── Narration ────────────────────────────────────────────────────────────────
 function _narrate() {
-  // Always show text
   const textEl = document.getElementById("story-text");
   if (textEl) { textEl.textContent = _storyData.text; textEl.classList.add("fade-in"); }
 
@@ -88,9 +74,7 @@ function _narrate() {
   const replay  = document.getElementById("story-replay");
 
   if (!window.speechSynthesis) {
-    // No TTS — just wait a beat then show task
     if (speaker) speaker.textContent = "📄";
-    // Give time to read, then fade
     setTimeout(() => {
       const narBox = document.getElementById("story-narration");
       if (narBox) {
@@ -109,12 +93,11 @@ function _narrate() {
   const utter   = new SpeechSynthesisUtterance(_storyData.text);
   utter.rate    = Math.max(0.78, 1.0 - difficulty * 0.018);
   utter.pitch   = 1.05;
-  utter.volume  = 1.0; // always play voice — mute button only affects ambient music
+  utter.volume  = 1.0;
 
   const onDone = () => {
     if (speaker) { speaker.classList.remove("speaking"); speaker.textContent = "🔊"; }
     if (replay)  replay.classList.remove("hidden");
-    // Pause so student can re-read text, then fade it out before showing task
     setTimeout(() => {
       const narBox = document.getElementById("story-narration");
       if (narBox) {
@@ -141,7 +124,6 @@ function _narrate() {
   window.speechSynthesis.speak(utter);
 }
 
-// ── Reveal task after narration ──────────────────────────────────────────────
 function _revealTask() {
   const task = document.getElementById("story-task");
   if (!task) return;
@@ -155,9 +137,6 @@ function _revealTask() {
   startTimer();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  PICTURE ORDER MODE
-// ═══════════════════════════════════════════════════════════════════════════
 function _buildOrderTask(container) {
   container.innerHTML = "";
 
@@ -180,7 +159,7 @@ function _buildOrderTask(container) {
     card.dataset.sceneIdx = sceneIdx;
     card.draggable        = true;
     card.innerHTML        = `<div class="scene-emoji">${scene.emoji}</div>
-                             <div class="scene-drag-hint">⠿</div>`;
+                            <div class="scene-drag-hint">⠿</div>`;
     card.addEventListener("dragstart", _onDragStart);
     card.addEventListener("dragover",  _onDragOver);
     card.addEventListener("drop",      _onDrop);
@@ -200,7 +179,6 @@ function _buildOrderTask(container) {
   container.appendChild(btn);
 }
 
-// ── Drag & Drop (mouse) ──────────────────────────────────────────────────────
 function _onDragStart(e) {
   _dragSrc = this;
   this.classList.add("dragging");
@@ -228,7 +206,6 @@ function _onDragEnd() {
   document.querySelectorAll(".story-scene-card").forEach(c => c.classList.remove("drag-over"));
 }
 
-// ── Touch drag (mobile) ───────────────────────────────────────────────────────
 function _onTouchStart(e) {
   _touchCard = this;
   const r = this.getBoundingClientRect();
@@ -274,7 +251,6 @@ function _onTouchEnd(e) {
   _touchCard = null;
 }
 
-// ── Check order ───────────────────────────────────────────────────────────────
 function _checkOrder() {
   if (typeof firstClickMs !== "undefined" && !firstClickMs && startMs) firstClickMs = Date.now() - startMs;
   const grid   = document.getElementById("story-order-grid");
@@ -289,7 +265,6 @@ function _checkOrder() {
     setTimeout(_storyWin, 500);
   } else {
     mistakes++;
-    // No red flash — just shake the wrong cards
     cards.forEach((c, i) => {
       if (parseInt(c.dataset.sceneIdx) !== correct[i]) {
         c.classList.add("scene-shake");
@@ -299,9 +274,6 @@ function _checkOrder() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  STORY QUESTION MODE
-// ═══════════════════════════════════════════════════════════════════════════
 function _buildQuestionTask(container) {
   container.innerHTML = "";
 
@@ -332,7 +304,6 @@ function _checkAnswer(chosen, btn, grid) {
     setTimeout(_storyWin, 600);
   } else {
     mistakes++;
-    // No red flash — just shake the button, then re-enable
     btn.classList.add("choice-shake");
     setTimeout(() => {
       btn.classList.remove("choice-shake");
@@ -341,12 +312,9 @@ function _checkAnswer(chosen, btn, grid) {
   }
 }
 
-// ── Win ───────────────────────────────────────────────────────────────────────
 function _storyWin() {
   clearInterval(window.__t);
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-  // Keep music paused — it will resume when leaving the story puzzle
-  // (back btn or continuing to next puzzle)
 
   const timeSec = startMs ? ((Date.now() - startMs) / 1000).toFixed(1) : "0.0";
   _statusEl().textContent = "Story solved! ✨";

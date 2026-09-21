@@ -1,16 +1,5 @@
-// ─── Story Recall — Content Library ─────────────────────────────────────────
-// Each story has:
-//   id        : unique string
-//   minDiff   : minimum difficulty level
-//   text      : narrated sentence(s) (Web Speech API)
-//   mode      : "order" | "question" | "both"
-//   scenes[]  : {emoji, label} — for "order" mode, correct order = array order
-//   question  : comprehension question string
-//   choices[] : answer strings
-//   answer    : index of correct choice
-
 const STORY_LIBRARY = [
-  // ── diff 0 ──────────────────────────────────────────────────────────────
+  // diff 0
   { id:"apple", minDiff:0, text:"Mark washed an apple and then ate it.", mode:"both",
     scenes:[{emoji:"🍎🚿",label:"Washing the apple"},{emoji:"😋🍎",label:"Eating the apple"}],
     question:"What did Mark do first?", choices:["He ate the apple","He washed the apple","He peeled the apple"], answer:1 },
@@ -29,7 +18,7 @@ const STORY_LIBRARY = [
   { id:"school_morning", minDiff:0, text:"Tom woke up, got dressed, and had breakfast before going to school.", mode:"order",
     scenes:[{emoji:"😴➡️😊",label:"Woke up"},{emoji:"👕",label:"Got dressed"},{emoji:"🥣",label:"Had breakfast"}] },
 
-  // ── diff 1 ──────────────────────────────────────────────────────────────
+  // diff 1
   { id:"bake_cake", minDiff:1, text:"Lily mixed the ingredients, put the cake in the oven, and waited for it to bake.", mode:"order",
     scenes:[{emoji:"🥣🥄",label:"Mixing ingredients"},{emoji:"🎂🔥",label:"Baking in oven"},{emoji:"⏳",label:"Waiting"}] },
 
@@ -43,7 +32,7 @@ const STORY_LIBRARY = [
   { id:"library", minDiff:1, text:"Anna went to the library and borrowed four books. She read two of them before bedtime.", mode:"question",
     question:"How many books did Anna borrow?", choices:["Two","Three","Four"], answer:2 },
 
-  // ── diff 2 ──────────────────────────────────────────────────────────────
+  // diff 2
   { id:"camping", minDiff:2, text:"The family packed their bags, drove to the forest, set up a tent, and cooked dinner over a campfire.", mode:"order",
     scenes:[{emoji:"🎒",label:"Packing bags"},{emoji:"🚗🌲",label:"Driving to forest"},{emoji:"⛺",label:"Setting up tent"},{emoji:"🔥🍖",label:"Cooking dinner"}] },
 
@@ -56,7 +45,7 @@ const STORY_LIBRARY = [
   { id:"rocket", minDiff:2, text:"The astronauts trained for months, boarded the rocket, launched into space, and orbited the Earth.", mode:"order",
     scenes:[{emoji:"🏋️",label:"Training"},{emoji:"🚀🧑‍🚀",label:"Boarding rocket"},{emoji:"🔥🚀",label:"Launch"},{emoji:"🌍🔭",label:"Orbiting Earth"}] },
 
-  // ── diff 3 ──────────────────────────────────────────────────────────────
+  // diff 3
   { id:"museum", minDiff:3, text:"Clara visited a museum. They saw seven paintings, three sculptures, and one ancient map. Clara's favourite was the map.", mode:"question",
     question:"What was Clara's favourite thing?", choices:["A painting","A sculpture","An ancient map"], answer:2 },
 
@@ -67,7 +56,7 @@ const STORY_LIBRARY = [
   { id:"recipe", minDiff:3, text:"The recipe needed two eggs, a cup of flour, half a cup of sugar, and a pinch of salt. Sam accidentally added two cups of sugar instead.", mode:"question",
     question:"How much sugar did Sam accidentally add?", choices:["Half a cup","One cup","Two cups"], answer:2 },
 
-  // ── diff 4 ──────────────────────────────────────────────────────────────
+  // diff 4
   { id:"expedition", minDiff:4, text:"The explorers left base camp at dawn, crossed a river, climbed a rocky hill, and reached the hidden valley by noon. They found an old stone wall.", mode:"both",
     scenes:[{emoji:"🌅🏕️",label:"Leaving base camp"},{emoji:"🌊🚶",label:"Crossing the river"},{emoji:"⛰️🧗",label:"Climbing the hill"},{emoji:"🏞️🗿",label:"Reaching the valley"}],
     question:"What did the explorers find in the hidden valley?", choices:["A treasure chest","An old stone wall","A waterfall"], answer:1 },
@@ -75,7 +64,7 @@ const STORY_LIBRARY = [
   { id:"detective", minDiff:4, text:"Detective Rivera noticed three clues: a muddy boot print, a broken window, and a red scarf near the door. She decided the scarf was most important.", mode:"question",
     question:"Which clue did Detective Rivera think was most important?", choices:["The muddy boot print","The broken window","The red scarf"], answer:2 },
 
-  // ── diff 5 ──────────────────────────────────────────────────────────────
+  // diff 5
   { id:"ancient_city", minDiff:5, text:"Archaeologists discovered an ancient city buried under sand dunes. They found tools, pottery, and bones of twelve different animal species. The pottery suggested the city was over two thousand years old.", mode:"question",
     question:"How many different animal species' bones were found?", choices:["Ten","Twelve","Twenty"], answer:1 },
 
@@ -86,7 +75,6 @@ const STORY_LIBRARY = [
     question:"How many junior doctors did Dr. Patel supervise?", choices:["Two","Three","Eight"], answer:1 }
 ];
 
-// ── Pick a story eligible for current difficulty ─────────────────────────────
 let _lastStoryId = null;
 function pickStory(diff) {
   const pool = STORY_LIBRARY.filter(s => diff >= s.minDiff);
@@ -96,7 +84,6 @@ function pickStory(diff) {
   return story;
 }
 
-// ── Decide sub-mode ──────────────────────────────────────────────────────────
 function pickSubMode(story, diff) {
   if (story.mode !== "both") return story.mode;
   // Lower difficulty → lean ordering; higher → lean questions

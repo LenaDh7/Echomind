@@ -10,10 +10,8 @@ $outcome       = $_POST['outcome']        ?? 'incomplete';
 $clsCode       = $_POST['classroom_code'] ?? null;
 $reactionTime  = floatval($_POST['reaction_time'] ?? 0);
 
-// Treat empty string as null
 if ($clsCode === '') $clsCode = null;
 
-// Add reaction_time column if not exists
 $conn->query("ALTER TABLE scores ADD COLUMN IF NOT EXISTS reaction_time FLOAT DEFAULT 0");
 
 $stmt = $conn->prepare(

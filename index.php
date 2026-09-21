@@ -1,32 +1,41 @@
 <?php
 session_start();
 require_once "php/db_connect.php";
-
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit;
-}
-
+if (!isset($_SESSION['username'])) { header("Location: login.php"); exit; }
 $username            = $_SESSION['username'];
 $role                = $_SESSION['role'] ?? 'player';
 $classroom_code      = $_SESSION['classroom_code'] ?? null;
-$session_token       = $_SESSION['session_token']      ?? null;
 $assigned_puzzle     = $_SESSION['assigned_puzzle'] ?? null;
-$assigned_difficulty  = $_SESSION['assigned_difficulty']  ?? null;
-$assigned_prep_time   = $_SESSION['assigned_prep_time']   ?? null;
+$assigned_difficulty = $_SESSION['assigned_difficulty'] ?? null;
+$assigned_prep_time  = $_SESSION['assigned_prep_time'] ?? null;
 unset($_SESSION['assigned_puzzle'], $_SESSION['assigned_difficulty'], $_SESSION['assigned_prep_time']);
 
-// Students: keep the session alive so student_logout.php can read role/code/token
-// when the student clicks "Student List". Store classroom code in a cookie so
-// that if they refresh (no assignment left), we redirect to classroom.php not login.php.
-if ($role === 'student') {
-    if ($classroom_code) {
-        setcookie('echomind_classroom', $classroom_code, time() + 3600, '/', '', false, true);
-    }
-    // Redirect back to classroom if student refreshes (assignment already consumed above)
-    if (!$assigned_puzzle) {
-        header("Location: classroom.php?code=" . urlencode($classroom_code ?? ''));
-        exit;
+$session_token = null;
+if (($role === 'student') && $classroom_code && $username) {
+    $session_token = bin2hex(random_bytes(16));
+    $st = $conn->prepare("UPDATE students SET session_token = ?, session_heartbeat = NOW(), is_active = 1 WHERE student_name = ? AND classroom_code = ?");
+    $st->bind_param("sss", $session_token, $username, $classroom_code);
+    $st->execute();
+}
+
+$coop_partner = null;
+$coop_theme   = "space";
+$coop_puzzle  = "memory";
+
+if ($role === 'student' && $classroom_code && $username) {
+    $cq = $conn->prepare(
+        "SELECT assigned_coop_partner, assigned_coop_theme, assigned_coop_puzzle
+          FROM students
+          WHERE student_name = ? AND classroom_code = ?
+          LIMIT 1"
+    );
+    $cq->bind_param("ss", $username, $classroom_code);
+    $cq->execute();
+    $crow = $cq->get_result()->fetch_assoc();
+    if ($crow && !empty($crow['assigned_coop_partner'])) {
+        $coop_partner = $crow['assigned_coop_partner'];
+        $coop_theme   = $crow['assigned_coop_theme']  ?? 'space';
+        $coop_puzzle  = $crow['assigned_coop_puzzle'] ?? 'memory';
     }
 }
 ?>
@@ -47,31 +56,37 @@ if ($role === 'student') {
 
   <section id="prestart">
     <canvas id="particles" class="particles"></canvas>
+
     <div class="pre-inner">
       <h2>Welcome, <span id="playername"></span></h2>
       <p class="hint">Choose your puzzle and starting level.</p>
 
       <div class="puzzle-cards">
+
         <div class="puzzle-card selected" data-puzzle="memory">
           <div class="card-icon">🌙</div>
           <div class="card-title">Witchlight Memory</div>
           <div class="card-desc">Watch the pattern of lights and repeat the sequence.</div>
         </div>
+
         <div class="puzzle-card" data-puzzle="shape">
           <div class="card-icon">🔷</div>
           <div class="card-title">Shape Memory</div>
           <div class="card-desc">Memorise the cards, then find every matching pair.</div>
         </div>
+
         <div class="puzzle-card" data-puzzle="story">
           <div class="card-icon">📖</div>
           <div class="card-title">Story Recall</div>
-          <div class="card-desc">Listen to a story, then order pictures or answer a question.</div>
+          <div class="card-desc">Listen to a story, then answer questions about it.</div>
         </div>
+
+
       </div>
 
       <div class="slider-section">
         <div class="level-selector">
-          <div class="level-label">
+          <div class="level-label" style="justify-content:center;gap:8px;">
             <span>Starting Level</span>
             <span class="level-value" id="level-display">0</span>
           </div>
@@ -91,9 +106,7 @@ if ($role === 'student') {
           <button id="open-dashboard-btn" class="ghost small">🏫 My Classroom</button>
           <?php endif; ?>
           <button id="reset-btn" class="ghost small">Reset Progress</button>
-          <?php if ($role !== 'student'): ?>
           <a href="logout.php" class="ghost small pre-logout-btn">⏻ Logout</a>
-          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -136,7 +149,7 @@ if ($role === 'student') {
 
     <div class="controls">
       <button id="back-btn"    class="ghost small">← Puzzles</button>
-      <button id="giveup-btn"  class="ghost small">↺ Restart</button>
+      <button id="giveup-btn"  class="ghost small">↩ Retry</button>
       <button id="logout-btn"  class="ghost small">Logout</button>
       <button id="show-stats"  class="ghost small">📊 Stats</button>
     </div>
@@ -186,17 +199,27 @@ if ($role === 'student') {
         <div class="dash-code" id="dash-code-display">------</div>
         <div class="dash-link" id="dash-link-display">Click to copy student link</div>
       </div>
-      <div class="add-student-row">
-        <input type="text" id="new-student-input" placeholder="Student name"/>
-        <button id="add-student-btn" class="small">+ Add</button>
+
+      <div id="dash-tabs" style="display:flex;gap:8px;margin:14px 0 16px;flex-wrap:wrap;">
+        <button class="dash-tab-btn ghost small active" data-dtab="manage" style="margin:0;">⚙️ Manage</button>
+        <button class="dash-tab-btn ghost small" data-dtab="stats" style="margin:0;">📊 Student Stats</button>
       </div>
-      <p id="add-student-error" style="color:var(--error);font-size:.82rem;min-height:16px;margin:3px 0 0;"></p>
-      <div class="student-roster" id="student-roster">
-        <p style="color:var(--muted);font-size:.88rem;">No students yet.</p>
+
+      <div id="dash-panel-manage">
+        <div class="add-student-row">
+          <input type="text" id="new-student-input" placeholder="Student name"/>
+          <button id="add-student-btn" class="small">+ Add</button>
+        </div>
+        <p id="add-student-error" style="color:var(--error);font-size:.82rem;min-height:16px;margin:3px 0 0;"></p>
+        <div class="student-roster" id="student-roster">
+          <p style="color:var(--muted);font-size:.88rem;">No students yet.</p>
+        </div>
       </div>
-      <div id="student-scores-section" style="display:none">
-        <h4 style="color:var(--magenta);margin:18px 0 8px;font-size:.9rem;">📊 Recent Activity</h4>
-        <div id="student-scores-list"></div>
+
+      <div id="dash-panel-stats" style="display:none">
+        <p style="color:var(--muted);font-size:.85rem;margin:0 0 10px;">Tap a student to see their full activity. <span style="color:#c9a6ff;">Co-op</span> games are tagged.</p>
+        <div id="stats-student-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+        <div id="stats-student-detail"></div>
       </div>
     </div>
   </div>
@@ -212,7 +235,6 @@ if ($role === 'student') {
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="stats-tab-btn ghost small active" data-tab="memory">🌙 Witchlight Memory</button>
       <button class="stats-tab-btn ghost small" data-tab="shape">🔷 Shape Memory</button>
-      <button class="stats-tab-btn ghost small" data-tab="story">📖 Story Recall</button>
       <button class="stats-tab-btn ghost small" data-tab="combined">⭐ Combined</button>
     </div>
     <p id="stats-empty" style="display:none;color:var(--muted);text-align:center;padding:20px 0;">No data yet — play some puzzles first!</p>
@@ -249,6 +271,8 @@ if ($role === 'student') {
 <audio id="ambient" src="ambient.wav" preload="auto" loop></audio>
 
 <script src="particles.js"></script>
+<script src="story_data.js"></script>
+<script src="story_puzzle.js"></script>
 <script>
   const PHP_USERNAME          = <?php echo json_encode($username); ?>;
   const PHP_ROLE              = <?php echo json_encode($role); ?>;
@@ -256,10 +280,11 @@ if ($role === 'student') {
   const PHP_ASSIGNED_PUZZLE   = <?php echo json_encode($assigned_puzzle); ?>;
   const PHP_ASSIGNED_DIFF     = <?php echo json_encode($assigned_difficulty !== null ? (int)$assigned_difficulty : null); ?>;
   const PHP_ASSIGNED_PREP     = <?php echo json_encode($assigned_prep_time  !== null ? (int)$assigned_prep_time  : null); ?>;
-  const PHP_SESSION_TOKEN     = <?php echo json_encode($session_token ?? null); ?>;
+  const PHP_SESSION_TOKEN     = <?php echo json_encode($session_token); ?>;
+  const PHP_COOP_PARTNER      = <?php echo json_encode($coop_partner); ?>;
+  const PHP_COOP_THEME        = <?php echo json_encode($coop_theme); ?>;
+  const PHP_COOP_PUZZLE       = <?php echo json_encode($coop_puzzle); ?>;
 </script>
-<script src="story_data.js"></script>
-<script src="story_puzzle.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

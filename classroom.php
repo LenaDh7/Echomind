@@ -9,7 +9,6 @@ if (!$code) {
     die("Invalid classroom link.");
 }
 
-// Validate classroom exists
 $stmt = $conn->prepare("SELECT classroom_name, teacher_username FROM classrooms WHERE classroom_code = ?");
 $stmt->bind_param("s", $code);
 $stmt->execute();
@@ -19,13 +18,17 @@ if ($res->num_rows == 0) {
 }
 $classroom = $res->fetch_assoc();
 
-// Ensure active session tracking columns exist
 $conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS is_active TINYINT(1) DEFAULT 0");
 $conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token VARCHAR(64) DEFAULT NULL");
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS session_heartbeat TIMESTAMP NULL DEFAULT NULL");
 
-// Get students WITH assignments
+$conn->query("UPDATE students SET is_active=0, session_token=NULL, session_heartbeat=NULL
+              WHERE is_active=1
+              AND (session_heartbeat IS NULL OR session_heartbeat < NOW() - INTERVAL 90 SECOND)");
+
 $sts = $conn->prepare("
-    SELECT student_name, assigned_puzzle, assigned_difficulty, is_active
+    SELECT student_name, assigned_puzzle, assigned_difficulty,
+          assigned_coop_partner, assigned_coop_theme, assigned_coop_puzzle, is_active
     FROM students
     WHERE classroom_code = ?
     ORDER BY student_name ASC
@@ -38,7 +41,6 @@ while ($row = $sres->fetch_assoc()) {
     $students[] = $row;
 }
 
-// Handle submission — log student in and redirect with their assignment
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $chosen = trim($_POST['student_name'] ?? '');
     $matched = null;
@@ -46,13 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($s['student_name'] === $chosen) { $matched = $s; break; }
     }
     if ($matched) {
-        // Block if another session is already active for this student
         if ($matched['is_active']) {
             $error = "This student is already in an active session. Please wait or ask your teacher.";
         } else {
-            // Generate a unique token for this session
             $token = bin2hex(random_bytes(16));
-            // Claim the session
             $claim = $conn->prepare("UPDATE students SET is_active=1, session_token=? WHERE classroom_code=? AND student_name=?");
             $claim->bind_param("sss", $token, $code, $chosen);
             $claim->execute();
@@ -60,8 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['classroom_code']      = $code;
             $_SESSION['role']                = 'student';
             $_SESSION['session_token']       = $token;
-            $_SESSION['assigned_puzzle']     = $matched['assigned_puzzle']    ?? 'memory';
-            $_SESSION['assigned_difficulty'] = $matched['assigned_difficulty'] ?? 0;
+            $_SESSION['assigned_puzzle']      = $matched['assigned_puzzle']     ?? 'memory';
+            $_SESSION['assigned_difficulty']  = $matched['assigned_difficulty']  ?? 0;
+            $_SESSION['assigned_coop_partner'] = $matched['assigned_coop_partner'] ?? null;
+            $_SESSION['assigned_coop_theme']   = $matched['assigned_coop_theme']   ?? 'space';
+            $_SESSION['assigned_coop_puzzle']  = $matched['assigned_coop_puzzle']  ?? 'memory';
             header("Location: index.php");
             exit;
         }

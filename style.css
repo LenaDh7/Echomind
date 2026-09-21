@@ -14,7 +14,7 @@ html,body{ height:100%; overflow:hidden;
   color:var(--text); font-family:'Poppins',system-ui,sans-serif;
 }
 
-/* ── Auth pages ─────────────────────────────── */
+/* Auth pages*/
 body.auth-page{ display:flex; align-items:center; justify-content:center; min-height:100vh; }
 .auth-canvas{ position:fixed; inset:0; z-index:0; pointer-events:none; }
 .auth-wrap{ position:relative; z-index:1; display:flex; align-items:center; justify-content:center; width:100%; height:100vh; padding:20px; }
@@ -40,7 +40,7 @@ body.auth-page{ display:flex; align-items:center; justify-content:center; min-he
 .auth-role-toggle button{ flex:1; margin:0; padding:9px; font-size:.85rem; border-radius:8px; background:transparent; color:var(--muted); border:1px solid #3d2058; box-shadow:none; transition:all .2s; }
 .auth-role-toggle button.active{ background:linear-gradient(180deg,var(--magenta),var(--magenta-d)); color:#22091f; border-color:transparent; }
 
-/* ── App shell ──────────────────────────────── */
+/* App shell */
 .wrap{ position:fixed; inset:0; max-width:1100px; margin:0 auto; padding:0 12px; display:flex; align-items:stretch; justify-content:center; overflow:hidden; }
 
 button{
@@ -66,7 +66,7 @@ section{
 }
 section.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
 
-/* ── Prestart ───────────────────────────────── */
+/* Prestart */
 #prestart{ justify-content:center; }
 .pre-inner{ z-index:1; width:100%; max-width:680px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
 .slider-section{ width:100%; display:flex; flex-direction:column; align-items:center; }
@@ -97,7 +97,7 @@ input[type=range]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%;
 #start-btn{ padding:12px 40px; font-size:1rem; margin:8px 0 4px; }
 .pre-actions{ display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin-top:2px; }
 
-/* ── Game ───────────────────────────────────── */
+/* Game */
 #game{ justify-content:flex-start; padding:6px 12px; }
 .hud{ display:flex; justify-content:space-between; align-items:center; color:var(--muted); width:100%; max-width:640px; margin:2px 0; z-index:1; flex-shrink:0; font-size:clamp(.75rem,1.4vw,.9rem); }
 #status{ color:var(--magenta); }
@@ -132,9 +132,7 @@ table{ width:100%; border-collapse:collapse; }
 th,td{ text-align:left; padding:5px 8px; border-bottom:1px solid #3a2450; color:var(--text); font-size:.82rem; }
 th{ color:var(--muted); font-weight:600; }
 
-/* ── Stats modal ────────────────────────────── */
-/* The outer wrapper just centres the box and dims the background.
-   It does NOT scroll — the inner box does. */
+/* Stats modal */
 #stats-modal{
   position:fixed; inset:0;
   background:rgba(6,0,15,.85); backdrop-filter:blur(8px);
@@ -144,7 +142,6 @@ th{ color:var(--muted); font-weight:600; }
 }
 #stats-modal.hidden{ display:none; }
 
-/* The floating box — this is the single scrollable container */
 .stats-modal-box{
   background:rgba(20,6,34,.97);
   border:1px solid rgba(255,95,203,.2);
@@ -153,7 +150,7 @@ th{ color:var(--muted); font-weight:600; }
   width:100%; max-width:860px;
   padding:22px 24px;
   max-height:88vh;
-  overflow-y:auto;           /* ONE scroll on the whole box */
+  overflow-y:auto;
   scrollbar-width:thin;
   scrollbar-color:var(--magenta-d) transparent;
 }
@@ -186,7 +183,6 @@ th{ color:var(--muted); font-weight:600; }
 /* Tab panels */
 .stats-tab-panel.hidden{ display:none; }
 
-/* Chart grid — NO overflow/scroll of its own, just a plain grid */
 .charts-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -254,11 +250,7 @@ th{ color:var(--muted); font-weight:600; }
   .dashboard-box{ padding:16px 12px; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════
-   SHAPE MEMORY
-   ═══════════════════════════════════════════════════════════════ */
-
+/* SHAPE MEMORY */
 .shape-grid{
   display:grid; gap:10px; justify-content:center; padding:4px;
 }
@@ -332,7 +324,7 @@ th{ color:var(--muted); font-weight:600; }
   100%{ transform:rotateY(180deg) translateX(0); }
 }
 
-/* ── Stats tab buttons ───────────────────────────────────────────────────── */
+/* Stats tab buttons*/
 .stats-tab-btn { transition: all .2s ease; }
 .stats-tab-btn.active {
   background: rgba(255,95,203,.2);
@@ -340,7 +332,7 @@ th{ color:var(--muted); font-weight:600; }
   color: var(--magenta);
 }
 
-/* ── Prestart logout link (styled like ghost small button) ───────────────── */
+/* Prestart logout link */
 a.pre-logout-btn {
   text-decoration: none;
   display: inline-flex;
@@ -365,11 +357,7 @@ a.pre-logout-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
 }
-/* ═══════════════════════════════════════════════════════════════════════════
-   STORY RECALL PUZZLE — appended below all existing rules
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── Puzzle container override ─────────────────────────────────────────────── */
+/* STORY RECALL PUZZLE */
 #puzzle.story-puzzle {
   display:        flex;
   flex-direction: column;
@@ -382,7 +370,7 @@ a.pre-logout-btn:hover {
   overflow:       visible;
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────────── */
+/* Header*/
 .story-header { text-align: center; width: 100%; }
 .story-mode-badge {
   display:        inline-block;
@@ -398,7 +386,7 @@ a.pre-logout-btn:hover {
 }
 .story-instruction { color: var(--muted); font-size: .88rem; margin: 0; }
 
-/* ── Narration card ─────────────────────────────────────────────────────────── */
+/* Narration card */
 .story-narration {
   background:    rgba(34,11,52,.65);
   border:        1px solid rgba(201,44,255,.25);
@@ -432,7 +420,7 @@ button.story-replay {
 }
 button.story-replay:hover { opacity: 1; }
 
-/* ── Task area ──────────────────────────────────────────────────────────────── */
+/* Task area */
 .story-task {
   width:          100%;
   display:        flex;
@@ -459,7 +447,7 @@ button.story-replay:hover { opacity: 1; }
   box-sizing:    border-box;
 }
 
-/* ── Picture order grid ─────────────────────────────────────────────────────── */
+/* Picture order grid */
 .story-order-grid {
   display:         flex;
   flex-wrap:       wrap;
@@ -490,7 +478,6 @@ button.story-replay:hover { opacity: 1; }
 .story-scene-card.dragging  { opacity: .45; cursor: grabbing; transform: scale(1.04); }
 .story-scene-card.drag-over { border-color: #c92cff; background: rgba(201,44,255,.18); transform: scale(1.04); }
 .story-scene-card.scene-correct { border-color: #4ade80; background: rgba(74,222,128,.12); box-shadow: 0 0 18px rgba(74,222,128,.35); }
-/* scene-wrong: red removed — shake only */
 @keyframes sceneShake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-6px); }
@@ -503,7 +490,6 @@ button.story-replay:hover { opacity: 1; }
 .scene-label  { font-size: .75rem; color: var(--muted); line-height: 1.3; }
 .scene-drag-hint { position: absolute; top: 7px; right: 9px; font-size: .82rem; color: rgba(201,44,255,.4); }
 
-/* ── Check button ───────────────────────────────────────────────────────────── */
 .story-check-btn {
   background:    rgba(201,44,255,.18);
   border:        2px solid rgba(201,44,255,.5);
@@ -524,7 +510,7 @@ button.story-replay:hover { opacity: 1; }
 }
 .story-check-btn:active { transform: scale(.97); }
 
-/* ── Multiple-choice answers ────────────────────────────────────────────────── */
+/*Multiple-choice answers */
 .story-choices { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .story-choice-btn {
   background:    rgba(44,11,72,.65);
@@ -547,7 +533,6 @@ button.story-replay:hover { opacity: 1; }
 }
 .story-choice-btn:disabled { cursor: default; opacity: .7; }
 .story-choice-btn.choice-correct { border-color: #4ade80; background: rgba(74,222,128,.18); color: #4ade80; }
-/* choice-wrong: red removed — shake only */
 @keyframes choiceShake {
   0%,100% { transform: translateX(0); }
   20%     { transform: translateX(-8px); }
@@ -557,14 +542,13 @@ button.story-replay:hover { opacity: 1; }
 }
 .story-choice-btn.choice-shake { animation: choiceShake 0.5s ease; }
 
-/* ── Fade-in animation ──────────────────────────────────────────────────────── */
+/* Fade-in animation*/
 .fade-in { animation: fadeInUp .4s ease forwards; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .story-scene-card { min-width: 96px; max-width: 120px; padding: 14px 8px 10px; }
   .scene-emoji      { font-size: 1.8rem; }
@@ -572,9 +556,7 @@ button.story-replay:hover { opacity: 1; }
   .story-check-btn  { padding: 10px 22px; }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SHAPE MEMORY — Preview fix (MUST stay at absolute bottom of file)
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* SHAPE MEMORY (MUST stay at absolute bottom of file) */
 .shape-card.previewing .shape-card-inner {
   transform: none !important;
   transition: none !important;
@@ -593,7 +575,6 @@ button.story-replay:hover { opacity: 1; }
   z-index: 1 !important;
 }
 
-/* ── Story narration fade-out ── */
 .story-narration-fadeout {
   animation: storyFadeOut 0.6s ease forwards;
 }

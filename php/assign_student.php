@@ -14,6 +14,8 @@ $code    = $_POST['classroom_code'] ?? '';
 $puzzle    = $_POST['puzzle']    ?? 'memory';
 $diff      = intval($_POST['difficulty'] ?? 5);
 $prepTime  = intval($_POST['prep_time']  ?? 45);
+$coopPartner = trim($_POST['coop_partner'] ?? '');
+$coopTheme   = trim($_POST['coop_theme']   ?? 'space');
 
 if (!$student || !$code) {
     echo json_encode(["error" => "Missing fields"]);
@@ -30,8 +32,10 @@ if (!$check->get_result()->num_rows) {
 }
 
 $conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_prep_time INT DEFAULT 45");
-$stmt = $conn->prepare("UPDATE students SET assigned_puzzle=?, assigned_difficulty=?, assigned_prep_time=? WHERE classroom_code=? AND student_name=?");
-$stmt->bind_param("sisss", $puzzle, $diff, $prepTime, $code, $student);
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_coop_partner VARCHAR(64) DEFAULT NULL");
+$conn->query("ALTER TABLE students ADD COLUMN IF NOT EXISTS assigned_coop_theme VARCHAR(32) DEFAULT 'space'");
+$stmt = $conn->prepare("UPDATE students SET assigned_puzzle=?, assigned_difficulty=?, assigned_prep_time=?, assigned_coop_partner=?, assigned_coop_theme=? WHERE classroom_code=? AND student_name=?");
+$stmt->bind_param("sisssss", $puzzle, $diff, $prepTime, $coopPartner, $coopTheme, $code, $student);
 $stmt->execute();
 echo json_encode(["ok" => true]);
 ?>
