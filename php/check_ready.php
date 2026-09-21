@@ -5,7 +5,6 @@ header('Content-Type: application/json');
 $code = $_POST['code'] ?? '';
 $username = $_POST['username'] ?? '';
 
-// Find who this user is (host or guest)
 $stmt = $conn->prepare("SELECT host, guest FROM rooms WHERE code = ?");
 $stmt->bind_param("s", $code);
 $stmt->execute();

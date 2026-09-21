@@ -17,7 +17,6 @@ if (!$student_name || !$code) {
     exit;
 }
 
-// Verify ownership
 $stmt = $conn->prepare("SELECT id FROM classrooms WHERE classroom_code = ? AND teacher_username = ?");
 $stmt->bind_param("ss", $code, $teacher);
 $stmt->execute();
